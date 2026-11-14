@@ -46,7 +46,7 @@
       return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jk">${JESTER}<em>JOKER</em></span>${rep}</div>`;
     }
     const r = E.rankLabel(c.rank), s = E.SUIT_SYM[c.suit];
-    return `<div class="card ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span></div>`;
+    return `<div class="card s-${c.suit} ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span></div>`;
   }
 
   const SUIT_ORDER = { S: 0, H: 1, C: 2, D: 3 };
@@ -413,7 +413,7 @@
         <button class="btn icon ghost" data-a="menu" aria-label="Menü">☰</button>
       </div>
       <div class="players">${players}</div>
-      <div class="table">${piles}${slots}${meldArea}</div>
+      <div class="table"><div class="center">${piles}${slots}</div>${meldArea}</div>
       <div class="dock">
         <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
         <div class="lastlog">${esc(lastLog)}</div>
@@ -512,7 +512,7 @@
         <div class="res">${ranking.map((x, k) => `<div class="r ${k === 0 ? 'win' : ''}"><span class="nm">${k + 1}. ${esc(x.p.name)}</span><span class="cards"></span><span class="pts">${x.p.total}</span></div>`).join('')}</div>`;
     } else {
       head = `<h2>Runde ${lr.round + 1} vorbei</h2><p>${lr.winner != null ? `🎉 <b>${esc(v.players[lr.winner].name)}</b> hat ausgemacht!` : 'Der Stapel ist aufgebraucht.'}</p>
-        <div class="res">${v.players.map((p, i) => `<div class="r ${i === lr.winner ? 'win' : ''}"><span class="nm">${esc(p.name)}</span><span class="cards">${lr.hands[i].map((c) => cardHTML(c)).join('')}</span><span class="pts">+${lr.points[i]}</span></div>`).join('')}</div>`;
+        <div class="res">${v.players.map((p, i) => `<div class="r ${i === lr.winner ? 'win' : ''}"><span class="nm">${esc(p.name)}</span><span class="cards">${i === v.seat ? lr.hands[i].map((c) => cardHTML(c)).join('') : (lr.counts[i] ? `<span class="hint" style="margin:0">${lr.counts[i]} Karte${lr.counts[i] === 1 ? '' : 'n'} übrig</span>` : '')}</span><span class="pts">+${lr.points[i]}</span></div>`).join('')}</div>`;
     }
     const btn = over
       ? (isHost ? `<button class="btn primary" data-a="again">Neues Spiel</button>` : '<p class="hint">Der Gastgeber kann ein neues Spiel starten.</p>')

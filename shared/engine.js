@@ -437,7 +437,12 @@
         pending: s.phase === 'knock' ? knockPending(s) : [],
       },
       log: s.log.slice(-25),
-      lastRound: reveal ? s.lastRound : null,
+      // Am Rundenende nur Punkte zeigen – fremde Karten bleiben verdeckt, nur die eigenen Restkarten sind sichtbar
+      lastRound: reveal && s.lastRound ? {
+        round: s.lastRound.round, winner: s.lastRound.winner, points: s.lastRound.points.slice(),
+        hands: s.lastRound.hands.map((h, i) => (i === seat ? h.slice() : [])),
+        counts: s.lastRound.hands.map((h) => h.length),
+      } : null,
       seq: s.seq,
     };
   }
