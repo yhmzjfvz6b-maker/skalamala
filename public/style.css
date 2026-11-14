@@ -689,3 +689,21 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 }
 .meld .card .ci b, .spcards .card .ci b { font-size: calc(var(--cw) * .34); }
 .meld .card, .staged .card, .spcards .card, .res .card { box-shadow: 0 0 0 1px #0a2378, -1px 0 3px rgba(0,0,0,.25); }
+
+/* NEU-Schild größer und über den Kartenrand ragend */
+.hand .card.new { overflow: visible; }
+.hand .card.new::after { display: none; }
+.hand .card.new .newbadge {
+  top: calc(var(--cw) * -.16); right: calc(var(--cw) * -.2);
+  font-size: calc(var(--cw) * .2); padding: .1em .55em; border-width: 3px;
+  box-shadow: 0 3px 0 #0a2378, 0 6px 12px rgba(0,0,0,.35); z-index: 5;
+  animation: badgepop 1.4s ease-in-out infinite;
+}
+@keyframes badgepop { 0%,100% { transform: rotate(10deg) scale(1); } 50% { transform: rotate(10deg) scale(1.1); } }
+.hand { padding-top: 26px; padding-right: 14px; }
+
+/* Rundentitel: klare Schrift statt der fetten Logo-Schrift */
+.contract .ttl { font-family: var(--body); font-weight: 800; font-size: 1.05rem; letter-spacing: 0; }
+.roundchip { font-family: var(--body); font-weight: 900; }
+
+.hand { align-content: safe center; }

@@ -558,7 +558,9 @@
     if (!el) return;
     const n = el.children.length;
     if (!n) return;
-    const W = el.clientWidth - 4, H = el.clientHeight - 26;
+    const cs = getComputedStyle(el);
+    const W = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 2;
+    const H = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 2;
     const gap = W < 520 ? 6 : 10;
     const maxCw = W < 520 ? 104 : 170;
     let cw = 34;
@@ -587,6 +589,7 @@
       <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Es gilt: <b>wer zuerst klopft</b>, bekommt die Karte – der Spieler am Zug hat aber immer Vorrang: nimmt er die Karte selbst, ist das Klopfen hinfällig. Zieht er vom Stapel, bekommt der erste Klopfer die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
       <h3>Bedienung</h3>
       <p>Karten <b>antippen</b> zum Auswählen. Karten <b>ziehen</b>, um sie in deine Wunsch-Reihenfolge zu bringen („Farbe“ oder „Wert“ sortiert automatisch). Eine Karte auf die Ablage ziehen wirft sie ab, auf eine Kombination ziehen legt sie an.</p>
+      <p><b>Doppelklick</b> auf eine Karte schiebt sie in den Sammelstapel, Doppelklick im Sammelstapel holt sie zurück.</p>
       <p><b>Sammelstapel:</b> Zieh Karten auf das ＋ (oder wähle sie aus und tippe „＋ Sammelstapel“), um z. B. einen Drilling oder eine Straße mit Joker zu sammeln. Ein grüner Haken zeigt, dass der Stapel gültig ist. Erfüllen deine Stapel die Vorgabe der Runde, erscheint „Auslegen“.</p>
       <h3>Kombinationen</h3>
       <ul>
@@ -693,18 +696,44 @@
     const d = drag; drag = null;
     clearDropMarks();
     ui.dragging = false;
-    if (!d.moved) { if (!cancel) toggleCard(d.id); return; }
+    if (!d.moved) {
+      if (cancel) return;
+      const now = Date.now();
+      if (ui.lastTap && ui.lastTap.id === d.id && now - ui.lastTap.t < 380) {
+        // Doppelklick: erster Klick hat ausgewählt – rückgängig machen, dann verschieben
+        ui.lastTap = null;
+        ui.selected = ui.selected.filter((x) => x !== d.id);
+        if (d.el.closest('#pilerow')) {
+          ui.piles = ui.piles.map((p) => p.filter((x) => x !== d.id)).filter((p) => p.length);
+        } else {
+          const target = ui.piles.length ? Math.min(ui.lastPile != null ? ui.lastPile : ui.piles.length - 1, ui.piles.length - 1) : 'new';
+          movePileCards([d.id], target);
+          ui.lastPile = target === 'new' ? ui.piles.length - 1 : target;
+        }
+        return render();
+      }
+      ui.lastTap = { id: d.id, t: now };
+      toggleCard(d.id);
+      return;
+    }
     d.el.classList.remove('dragging'); d.el.style.transform = '';
     const v = ui.view;
     const under = cancel ? null : document.elementFromPoint(e.clientX, e.clientY);
     const canPlay = v && v.current === v.seat && v.phase === 'play';
     const onDiscard = under && under.closest('[data-drop="discard"]');
+    const onMeld0 = under && under.closest('[data-meld]');
+    if ((onDiscard || onMeld0) && v && !canPlay) {
+      if (v.current === v.seat && v.phase === 'draw') toast('Bitte erst eine Karte nehmen – vom Stapel oder von der Ablage.');
+      else if (v.current !== v.seat) toast('Du bist noch nicht dran.');
+      return render();
+    }
     const onMeld = under && under.closest('[data-meld]');
     const onPile = under && under.closest('[data-pile]');
     const moveIds = ui.selected.includes(d.id) && ui.selected.length > 1 ? ui.selected.slice() : [d.id];
     if (onPile) {
       const t = onPile.dataset.pile;
       movePileCards(moveIds, t === 'new' ? 'new' : +t);
+      ui.lastPile = t === 'new' ? ui.piles.length - 1 : Math.min(+t, ui.piles.length - 1);
       ui.selected = []; ui.pendingRender = false;
       return render();
     }
@@ -740,8 +769,11 @@
   }
   function layOff(meldId) {
     const v = ui.view;
-    if (!v || v.current !== v.seat || v.phase !== 'play') return;
+    if (!v) return;
+    if (v.current === v.seat && v.phase === 'draw') return toast('Bitte erst eine Karte nehmen – vom Stapel oder von der Ablage.');
+    if (v.current !== v.seat || v.phase !== 'play') return toast('Du bist noch nicht dran.');
     if (!v.players[v.seat].down) return toast('Erst die Vorgabe auslegen, dann anlegen.');
+    if (v.ownLocked && (v.melds.find((m) => m.id === meldId) || {}).owner === v.seat) return toast('An deine eigenen Kombinationen erst ab deinem nächsten Zug anlegen.');
     if (!ui.selected.length) return toast('Wähle zuerst Karten aus deiner Hand.');
     ui.ctl.act({ type: 'layOff', cardIds: ui.selected.slice(), meldId });
     ui.selected = [];
@@ -822,6 +854,7 @@
         const ids = ui.selected.slice();
         if (!ids.length) return toast('Karten antippen und dann „＋ Sammelstapel“ – oder Karten auf das ＋ ziehen.');
         movePileCards(ids, 'new');
+        ui.lastPile = ui.piles.length - 1;
         ui.selected = [];
         return render();
       }
