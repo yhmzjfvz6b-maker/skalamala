@@ -17,6 +17,12 @@ Dann im Browser öffnen: **http://localhost:3000**
 - **Gegen Bots:** Namen eingeben, Anzahl Bots wählen, „Los geht's".
 - **Online:** „Raum erstellen" → den 4-stelligen Code (oder den Einladungslink) an die Mitspieler schicken → die geben den Code ein und klicken „Beitreten" → der Gastgeber füllt bei Bedarf mit Bots auf und startet.
 
+## Bedienung
+
+- **Karten antippen** = auswählen (für Kombinationen, Anlegen oder Abwerfen).
+- **Karten ziehen** = eigene Reihenfolge festlegen. Mit „Farbe" oder „Wert" wird wieder automatisch sortiert.
+- Eine Karte auf die **Ablage ziehen** = abwerfen, auf eine **Kombination ziehen** = anlegen.
+
 ## Mit Freunden übers Internet spielen
 
 Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei Wege:

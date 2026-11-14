@@ -417,3 +417,78 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 @media (min-width: 900px) and (max-height: 820px) {
   :root { --cw: clamp(90px, 7.4vw, 118px); --pw: clamp(104px, 8.2vw, 124px); }
 }
+
+/* ===================== Layout v3: Hand groß in der Mitte, Stapel unten ===================== */
+.main { min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 4px 10px 0; }
+.handzone {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(255,255,255,.08), rgba(7,26,92,.35));
+  border: 2px solid rgba(255,255,255,.28); border-radius: 22px; padding: 6px 8px 4px;
+  box-shadow: inset 0 0 0 2px rgba(7,26,92,.25);
+}
+.handzone .handbar { padding: 2px 2px 0; }
+.draghint { opacity: .75; font-weight: 700; }
+.sortbtn { --bg: rgba(255,255,255,.16); --bg2: rgba(255,255,255,.08); --edge: rgba(0,0,0,.4); }
+.sortbtn.on { --bg: var(--yellow-2); --bg2: var(--orange); --edge: #b84a00; --fg: #6b1500; text-shadow: none; }
+.hand {
+  flex: 1 1 auto; min-height: 120px; padding: 22px 2px 4px; overflow: hidden auto;
+  display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: var(--hg, 8px);
+}
+.hand .card { margin: 0 !important; touch-action: none; cursor: grab; }
+.hand .card.dragging { z-index: 20; cursor: grabbing; pointer-events: none; transition: none; box-shadow: 0 0 0 3px #fff, 0 18px 30px rgba(0,0,0,.5); }
+.hand .card.drop-l { box-shadow: -8px 0 0 -1px var(--yellow), 0 4px 10px rgba(0,0,0,.3); }
+.hand .card.drop-r { box-shadow: 8px 0 0 -1px var(--yellow), 0 4px 10px rgba(0,0,0,.3); }
+.drop-on { outline: 4px solid var(--yellow) !important; outline-offset: 3px; border-radius: 14px; }
+.tablezone { flex: 0 1 auto; max-height: 30%; overflow: auto; min-height: 0; }
+.tablezone .meldarea { margin-top: 0; }
+.tablezone .empty-table { padding: 4px 0; font-size: .85rem; }
+.dock { padding: 4px 10px 2px; }
+.pilebar {
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(7,26,92,.8), rgba(4,14,58,.96));
+  border-top: 3px solid var(--yellow); box-shadow: 0 -6px 16px rgba(0,0,0,.25);
+}
+.pilebar .piles { padding: 0; gap: 14px; align-items: center; }
+.pilebar .knockbox { position: static; transform: none; }
+.pilebar .slots { flex-direction: column; align-items: flex-start; margin: 0; gap: 4px; }
+.slotlbl { font-size: .72rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+:root { --pw: clamp(52px, 13.5vw, 74px); }
+.pile .lbl { font-size: .72rem; padding: 0 8px; }
+.back span { margin-top: calc(var(--cw) * .9); }
+
+@media (min-width: 900px) {
+  :root { --pw: clamp(92px, 7vw, 112px); }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 32%); gap: 14px; padding: 8px 18px 0; }
+  .tablezone { max-height: none; overflow: auto; background: rgba(7,26,92,.35); border: 2px solid var(--line); border-radius: 22px; padding: 10px; }
+  .tablezone .meldarea { display: flex !important; flex-direction: column; }
+  .pilebar { gap: 28px; }
+  .pilebar .slots { flex-direction: row; align-items: center; }
+}
+@media (max-width: 600px) {
+  .draghint { display: none; }
+  .pilebar .slots .slot { font-size: .68rem; padding: 2px 8px; }
+}
+@media (max-height: 640px) and (orientation: landscape) {
+  :root { --pw: clamp(42px, 9vh, 60px); }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 34%); }
+  .tablezone { max-height: none; }
+  .players { padding: 6px 10px 2px; }
+}
+@media (min-width: 900px) {
+  .game {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "top top" "players players" "main main" "pile dock";
+  }
+  .topbar { grid-area: top; }
+  .players { grid-area: players; }
+  .main { grid-area: main; }
+  .pilebar { grid-area: pile; justify-content: flex-start; padding-left: 24px; padding-right: 24px; border-top-right-radius: 0; }
+  .dock {
+    grid-area: dock; display: flex; flex-direction: column; justify-content: center;
+    background: linear-gradient(180deg, rgba(7,26,92,.8), rgba(4,14,58,.96)); border-top: 3px solid var(--yellow);
+    padding: 8px 24px calc(8px + env(safe-area-inset-bottom));
+  }
+  .pilebar .slots { flex-direction: column; align-items: flex-start; }
+}

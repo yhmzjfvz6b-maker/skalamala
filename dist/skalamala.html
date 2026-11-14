@@ -431,6 +431,81 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   :root { --cw: clamp(90px, 7.4vw, 118px); --pw: clamp(104px, 8.2vw, 124px); }
 }
 
+/* ===================== Layout v3: Hand groß in der Mitte, Stapel unten ===================== */
+.main { min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 4px 10px 0; }
+.handzone {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(255,255,255,.08), rgba(7,26,92,.35));
+  border: 2px solid rgba(255,255,255,.28); border-radius: 22px; padding: 6px 8px 4px;
+  box-shadow: inset 0 0 0 2px rgba(7,26,92,.25);
+}
+.handzone .handbar { padding: 2px 2px 0; }
+.draghint { opacity: .75; font-weight: 700; }
+.sortbtn { --bg: rgba(255,255,255,.16); --bg2: rgba(255,255,255,.08); --edge: rgba(0,0,0,.4); }
+.sortbtn.on { --bg: var(--yellow-2); --bg2: var(--orange); --edge: #b84a00; --fg: #6b1500; text-shadow: none; }
+.hand {
+  flex: 1 1 auto; min-height: 120px; padding: 22px 2px 4px; overflow: hidden auto;
+  display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: var(--hg, 8px);
+}
+.hand .card { margin: 0 !important; touch-action: none; cursor: grab; }
+.hand .card.dragging { z-index: 20; cursor: grabbing; pointer-events: none; transition: none; box-shadow: 0 0 0 3px #fff, 0 18px 30px rgba(0,0,0,.5); }
+.hand .card.drop-l { box-shadow: -8px 0 0 -1px var(--yellow), 0 4px 10px rgba(0,0,0,.3); }
+.hand .card.drop-r { box-shadow: 8px 0 0 -1px var(--yellow), 0 4px 10px rgba(0,0,0,.3); }
+.drop-on { outline: 4px solid var(--yellow) !important; outline-offset: 3px; border-radius: 14px; }
+.tablezone { flex: 0 1 auto; max-height: 30%; overflow: auto; min-height: 0; }
+.tablezone .meldarea { margin-top: 0; }
+.tablezone .empty-table { padding: 4px 0; font-size: .85rem; }
+.dock { padding: 4px 10px 2px; }
+.pilebar {
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(7,26,92,.8), rgba(4,14,58,.96));
+  border-top: 3px solid var(--yellow); box-shadow: 0 -6px 16px rgba(0,0,0,.25);
+}
+.pilebar .piles { padding: 0; gap: 14px; align-items: center; }
+.pilebar .knockbox { position: static; transform: none; }
+.pilebar .slots { flex-direction: column; align-items: flex-start; margin: 0; gap: 4px; }
+.slotlbl { font-size: .72rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+:root { --pw: clamp(52px, 13.5vw, 74px); }
+.pile .lbl { font-size: .72rem; padding: 0 8px; }
+.back span { margin-top: calc(var(--cw) * .9); }
+
+@media (min-width: 900px) {
+  :root { --pw: clamp(92px, 7vw, 112px); }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 32%); gap: 14px; padding: 8px 18px 0; }
+  .tablezone { max-height: none; overflow: auto; background: rgba(7,26,92,.35); border: 2px solid var(--line); border-radius: 22px; padding: 10px; }
+  .tablezone .meldarea { display: flex !important; flex-direction: column; }
+  .pilebar { gap: 28px; }
+  .pilebar .slots { flex-direction: row; align-items: center; }
+}
+@media (max-width: 600px) {
+  .draghint { display: none; }
+  .pilebar .slots .slot { font-size: .68rem; padding: 2px 8px; }
+}
+@media (max-height: 640px) and (orientation: landscape) {
+  :root { --pw: clamp(42px, 9vh, 60px); }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 34%); }
+  .tablezone { max-height: none; }
+  .players { padding: 6px 10px 2px; }
+}
+@media (min-width: 900px) {
+  .game {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "top top" "players players" "main main" "pile dock";
+  }
+  .topbar { grid-area: top; }
+  .players { grid-area: players; }
+  .main { grid-area: main; }
+  .pilebar { grid-area: pile; justify-content: flex-start; padding-left: 24px; padding-right: 24px; border-top-right-radius: 0; }
+  .dock {
+    grid-area: dock; display: flex; flex-direction: column; justify-content: center;
+    background: linear-gradient(180deg, rgba(7,26,92,.8), rgba(4,14,58,.96)); border-top: 3px solid var(--yellow);
+    padding: 8px 24px calc(8px + env(safe-area-inset-bottom));
+  }
+  .pilebar .slots { flex-direction: column; align-items: flex-start; }
+}
+
 </style>
 </head>
 <body>
@@ -1220,6 +1295,15 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     });
   }
 
+  // Eigene Reihenfolge (per Ziehen) oder automatisch sortiert
+  function orderedHand(cards, round) {
+    if (ui.sort === 'custom' && ui.orderRound !== round) { ui.sort = store.get('sort', 'suit'); }
+    if (ui.sort !== 'custom') return sortHand(cards, ui.sort);
+    const pos = new Map(ui.order.map((id, i) => [id, i]));
+    const key = (c) => (pos.has(c.id) ? pos.get(c.id) : 1e6 + c.id);
+    return cards.slice().sort((a, b) => key(a) - key(b));
+  }
+
   // Passen die (vorgemerkten) Kombinationen auf verschiedene Vorgaben?
   function partialMatch(melds, slots) {
     if (melds.length > slots.length) return false;
@@ -1244,6 +1328,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     bots: store.get('bots', 2),
     knockPrompt: store.get('knockPrompt', true),
     sort: store.get('sort', 'suit'),
+    order: [], orderRound: -1, dragging: false, pendingRender: false,
     ctl: null,
     view: null,
     room: null,
@@ -1362,6 +1447,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 
   // ---------- Rendering ----------
   function render() {
+    if (ui.dragging) { ui.pendingRender = true; return; }
     if (ui.screen === 'home') return renderHome();
     if (ui.screen === 'lobby') return renderLobby();
     if (ui.screen === 'game' && ui.view) return renderGame();
@@ -1509,16 +1595,16 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
           <div class="back"><span>${v.stockCount}</span></div>
           <div class="lbl">Stapel</div>
         </div>
-        <div class="pile ${canDraw && v.discardTop ? 'clickable' : ''} ${canDiscardTap ? 'clickable' : ''}" data-a="${canDraw ? 'takeDiscard' : canDiscardTap ? 'discardSel' : ''}">
+        <div class="pile ${canDraw && v.discardTop ? 'clickable' : ''} ${canDiscardTap ? 'clickable' : ''}" data-drop="discard" data-a="${canDraw ? 'takeDiscard' : canDiscardTap ? 'discardSel' : ''}">
           ${cardHTML(v.discardTop)}
           <div class="lbl">Ablage${v.discardTop ? ` (${v.discardCount})` : ''}</div>
-          ${knockBtn ? `<div class="knockbox">${knockBtn}</div>` : ''}
         </div>
+        ${knockBtn ? `<div class="knockbox">${knockBtn}</div>` : ''}
       </div>`;
 
     // Vorgaben
     const ownMelds = v.melds.filter((m) => m.owner === me);
-    const slots = `<div class="slots" style="${knockBtn ? 'margin-top:48px' : ''}">${R.slots.map((s) => `<span class="slot ${myP.down ? 'done' : ''}">${E.slotLabel(s)}</span>`).join('')}</div>`;
+    const slots = `<div class="slots"><span class="slotlbl">Gesucht:</span>${R.slots.map((s) => `<span class="slot ${myP.down ? 'done' : ''}">${E.slotLabel(s)}</span>`).join('')}</div>`;
 
     // Auslagen
     const layTarget = canPlay && myP.down && ui.selected.length > 0;
@@ -1533,7 +1619,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
         }).join('')}
       </div></div>`);
     }
-    const meldArea = groups.length ? `<div class="meldarea">${groups.join('')}</div>` : `<div class="empty-table">Noch hat niemand ausgelegt.</div>`;
+    const meldArea = groups.length ? `<div class="meldarea">${groups.join('')}</div>` : `<div class="empty-table">Auslage: noch hat niemand ausgelegt.</div>`;
 
     // Aktionen
     const st = statusText(v);
@@ -1554,7 +1640,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     const staging = ui.staged.length ? `<div class="staging">${ui.staged.map((m, i) => `<div class="staged">${m.map((id) => cardHTML(handById.get(id))).join('')}<button data-a="unstage" data-i="${i}" aria-label="Kombination auflösen">✕</button></div>`).join('')}</div>` : '';
 
     // Hand
-    const hand = sortHand(v.hand.filter((c) => !stagedIds.has(c.id)), ui.sort);
+    const hand = orderedHand(v.hand.filter((c) => !stagedIds.has(c.id)), v.round);
     const handPts = E.handPoints(v.hand);
     const handHTML = hand.map((c) => cardHTML(c, { cls: `${ui.selected.includes(c.id) ? 'sel' : ''} ${c.id === v.lastDrawn ? 'new' : ''}` })).join('');
 
@@ -1574,20 +1660,27 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
         <button class="btn icon ghost" data-a="menu" aria-label="Menü">☰</button>
       </div>
       <div class="players">${players}</div>
-      <div class="table"><div class="center">${piles}${slots}</div>${meldArea}</div>
+      <div class="main">
+        <div class="handzone">
+          <div class="handbar">
+            <span>${v.hand.length} Karten · ${handPts} Pkt <span class="draghint">· ziehen zum Sortieren</span></span>
+            <span>
+              <button class="btn small sortbtn ${ui.sort === 'suit' ? 'on' : ''}" data-a="sortSuit">Farbe</button>
+              <button class="btn small sortbtn ${ui.sort === 'rank' ? 'on' : ''}" data-a="sortRank">Wert</button>
+              ${ui.selected.length ? '<button class="btn small danger" data-a="clearSel" aria-label="Auswahl aufheben">✕</button>' : ''}
+            </span>
+          </div>
+          <div class="hand" id="hand">${handHTML}</div>
+        </div>
+        <div class="tablezone">${meldArea}</div>
+      </div>
       <div class="dock">
         <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
         <div class="lastlog">${esc(lastLog)}</div>
         ${staging}
         <div class="actions">${actions.join('')}</div>
       </div>
-      <div class="handwrap">
-        <div class="handbar">
-          <span>${v.hand.length} Karten · ${handPts} Pkt</span>
-          <span><button class="btn small" data-a="sort" style="--bg:rgba(255,255,255,.16);--bg2:rgba(255,255,255,.08);--edge:rgba(0,0,0,.4)">⇅ ${ui.sort === 'suit' ? 'Farbe' : 'Wert'}</button>${ui.selected.length ? '<button class="btn small danger" data-a="clearSel">✕ Auswahl</button>' : ''}</span>
-        </div>
-        <div class="hand" id="hand">${handHTML}</div>
-      </div>
+      <div class="pilebar">${piles}${slots}</div>
     </div>
     ${renderKnockPrompt(v)}`;
     layoutHand();
@@ -1611,18 +1704,23 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     bar.style.transform = `scaleX(${f})`;
   }, 100);
 
+  // Handkarten so groß wie möglich in die große Fläche einpassen
   function layoutHand() {
     const el = document.getElementById('hand');
     if (!el) return;
-    const cards = el.children;
-    const n = cards.length;
+    const n = el.children.length;
     if (!n) return;
-    const W = el.clientWidth;
-    const cw = cards[0].getBoundingClientRect().width;
-    const step = n > 1 ? Math.min(cw + 6, (W - cw) / (n - 1)) : 0;
-    const total = cw + step * (n - 1);
-    const start = Math.max(0, (W - total) / 2);
-    for (let i = 0; i < n; i++) cards[i].style.marginLeft = i === 0 ? `${start}px` : `${step - cw}px`;
+    const W = el.clientWidth - 4, H = el.clientHeight - 26;
+    const gap = W < 520 ? 6 : 10;
+    const maxCw = W < 520 ? 104 : 150;
+    let cw = 34;
+    for (let c = maxCw; c >= 34; c -= 2) {
+      const cols = Math.max(1, Math.floor((W + gap) / (c + gap)));
+      const rows = Math.ceil(n / cols);
+      if (rows * c * 1.42 + (rows - 1) * gap <= H) { cw = c; break; }
+    }
+    el.style.setProperty('--cw', cw + 'px');
+    el.style.setProperty('--hg', gap + 'px');
   }
   window.addEventListener('resize', layoutHand);
 
@@ -1639,6 +1737,8 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       </ol>
       <h3>Klopfen 👊</h3>
       <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Der Spieler am Zug hat Vorrang: nimmt er die Karte, ist das Klopfen hinfällig. Zieht er vom Stapel, bekommt der Klopfer (der Nächste im Uhrzeigersinn) die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
+      <h3>Bedienung</h3>
+      <p>Karten <b>antippen</b> zum Auswählen. Karten <b>ziehen</b>, um sie in deine Wunsch-Reihenfolge zu bringen („Farbe“ oder „Wert“ sortiert automatisch). Eine Karte auf die Ablage ziehen wirft sie ab, auf eine Kombination ziehen legt sie an.</p>
       <h3>Kombinationen</h3>
       <ul>
         <li><b>Gruppe:</b> gleiche Werte, z. B. 3 Zehnen (Farben egal).</li>
@@ -1688,8 +1788,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 
   // ---------- Eingaben ----------
   $app.addEventListener('click', (e) => {
-    const cardEl = e.target.closest('#hand .card');
-    if (cardEl) return toggleCard(+cardEl.dataset.id);
+    if (e.target.closest('#hand .card')) return; // per Zeiger-Logik (Tippen/Ziehen)
     const meldEl = e.target.closest('[data-meld]');
     if (meldEl) return layOff(+meldEl.dataset.meld);
     const b = e.target.closest('[data-a]');
@@ -1699,6 +1798,76 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     if (e.key === 'Enter' && e.target.id === 'code') handle('join');
     if (e.key === 'Enter' && e.target.id === 'name' && !ui.onlineAvailable) handle('playBots');
   });
+
+  // ---------- Ziehen & Ablegen der Handkarten ----------
+  let drag = null;
+  function clearDropMarks() { document.querySelectorAll('.drop-l,.drop-r,.drop-on').forEach((x) => x.classList.remove('drop-l', 'drop-r', 'drop-on')); }
+  function dropSlot(x, y, rects) {
+    let best = null, bd = Infinity;
+    for (const r of rects) {
+      const cx = r.r.left + r.r.width / 2, cy = r.r.top + r.r.height / 2;
+      const d = Math.hypot(x - cx, (y - cy) * 1.6);
+      if (d < bd) { bd = d; best = r; }
+    }
+    if (!best) return null;
+    return { target: best, after: x > best.r.left + best.r.width / 2 };
+  }
+  $app.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('#hand .card');
+    if (!c || (e.button != null && e.button > 0)) return;
+    drag = { id: +c.dataset.id, el: c, x0: e.clientX, y0: e.clientY, moved: false, pid: e.pointerId };
+    try { c.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  $app.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.moved) {
+      if (Math.hypot(dx, dy) < 9) return;
+      drag.moved = true; ui.dragging = true;
+      drag.el.classList.add('dragging');
+      drag.rects = [...document.querySelectorAll('#hand .card')].filter((x) => x !== drag.el).map((x) => ({ id: +x.dataset.id, r: x.getBoundingClientRect(), el: x }));
+    }
+    e.preventDefault();
+    drag.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.max(-8, Math.min(8, dx / 30))}deg) scale(1.06)`;
+    clearDropMarks();
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const special = under && (under.closest('[data-drop="discard"]') || under.closest('[data-meld]'));
+    if (special) { special.classList.add('drop-on'); return; }
+    const sl = dropSlot(e.clientX, e.clientY, drag.rects);
+    if (sl) sl.target.el.classList.add(sl.after ? 'drop-r' : 'drop-l');
+  });
+  function endDrag(e, cancel) {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const d = drag; drag = null;
+    clearDropMarks();
+    ui.dragging = false;
+    if (!d.moved) { if (!cancel) toggleCard(d.id); return; }
+    d.el.classList.remove('dragging'); d.el.style.transform = '';
+    const v = ui.view;
+    const under = cancel ? null : document.elementFromPoint(e.clientX, e.clientY);
+    const canPlay = v && v.current === v.seat && v.phase === 'play';
+    const onDiscard = under && under.closest('[data-drop="discard"]');
+    const onMeld = under && under.closest('[data-meld]');
+    if (onDiscard && canPlay) { ui.selected = []; ui.pendingRender = false; ui.ctl.act({ type: 'discard', cardId: d.id }); return render(); }
+    if (onMeld && canPlay) {
+      if (!v.players[v.seat].down) { toast('Erst die Vorgabe auslegen, dann anlegen.'); return render(); }
+      const ids = ui.selected.includes(d.id) ? ui.selected.slice() : [d.id];
+      ui.selected = []; ui.pendingRender = false;
+      ui.ctl.act({ type: 'layOff', cardIds: ids, meldId: +onMeld.dataset.meld });
+      return render();
+    }
+    if (!cancel && d.rects && d.rects.length) {
+      const sl = dropSlot(e.clientX, e.clientY, d.rects);
+      const order = [...document.querySelectorAll('#hand .card')].map((x) => +x.dataset.id).filter((id) => id !== d.id);
+      let idx = order.indexOf(sl.target.id) + (sl.after ? 1 : 0);
+      order.splice(idx, 0, d.id);
+      ui.order = order; ui.orderRound = v.round; ui.sort = 'custom';
+    }
+    ui.pendingRender = false;
+    render();
+  }
+  $app.addEventListener('pointerup', (e) => endDrag(e, false));
+  $app.addEventListener('pointercancel', (e) => endDrag(e, true));
 
   function toggleCard(id) {
     const i = ui.selected.indexOf(id);
@@ -1768,7 +1937,8 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
           if (e.target.id === 'kp2') { ui.knockPrompt = e.target.checked; store.set('knockPrompt', ui.knockPrompt); }
           onModalClick(e);
         });
-      case 'sort': ui.sort = ui.sort === 'suit' ? 'rank' : 'suit'; store.set('sort', ui.sort); return render();
+      case 'sortSuit': ui.sort = 'suit'; store.set('sort', 'suit'); return render();
+      case 'sortRank': ui.sort = 'rank'; store.set('sort', 'rank'); return render();
       case 'clearSel': ui.selected = []; return render();
       case 'drawStock': return ui.ctl.act({ type: 'drawStock' });
       case 'takeDiscard': return ui.ctl.act({ type: 'takeDiscard' });
