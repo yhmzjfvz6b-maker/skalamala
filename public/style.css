@@ -83,7 +83,7 @@ img { display: block; max-width: 100%; }
 /* ---------- Startseite ---------- */
 .home { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: max(16px, env(safe-area-inset-top)) 16px 32px; gap: 18px; position: relative; overflow-x: hidden; }
 .logo { position: relative; width: min(300px, 62vw); margin-top: 1vh; display: grid; place-items: center; }
-.logo img { position: relative; z-index: 1; width: 100%; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); animation: bob 4.5s ease-in-out infinite; }
+.logo img { position: relative; z-index: 1; width: 100%; height: auto; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); animation: bob 4.5s ease-in-out infinite; }
 .burst { /* Strahlenkranz hinter dem Logo */
   position: absolute; z-index: 0; width: 140%; aspect-ratio: 1; border-radius: 50%;
   background: repeating-conic-gradient(from 0deg, rgba(255,226,94,.20) 0 9deg, transparent 9deg 22deg);
@@ -124,7 +124,7 @@ img { display: block; max-width: 100%; }
 .divider { height: 2px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.3) 0 8px, transparent 8px 14px); margin: 18px 0; }
 
 /* ---------- Lobby ---------- */
-.lobbylogo { width: min(300px, 70vw); filter: drop-shadow(0 8px 14px rgba(0,0,0,.3)); }
+.lobbylogo { width: min(300px, 70vw); height: auto; filter: drop-shadow(0 8px 14px rgba(0,0,0,.3)); }
 .lobby .code {
   font-family: var(--display); font-size: clamp(48px, 14vw, 72px); letter-spacing: .16em; text-align: center; margin: 2px 0 8px;
   color: var(--yellow); text-shadow: 0 3px 0 var(--red-2), 0 6px 0 rgba(4,14,58,.6);
@@ -475,23 +475,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   .tablezone { max-height: none; }
   .players { padding: 6px 10px 2px; }
 }
-@media (min-width: 900px) {
-  .game {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    grid-template-areas: "top top" "players players" "main main" "pile dock";
-  }
-  .topbar { grid-area: top; }
-  .players { grid-area: players; }
-  .main { grid-area: main; }
-  .pilebar { grid-area: pile; justify-content: flex-start; padding-left: 24px; padding-right: 24px; border-top-right-radius: 0; }
-  .dock {
-    grid-area: dock; display: flex; flex-direction: column; justify-content: center;
-    background: linear-gradient(180deg, rgba(7,26,92,.8), rgba(4,14,58,.96)); border-top: 3px solid var(--yellow);
-    padding: 8px 24px calc(8px + env(safe-area-inset-bottom));
-  }
-  .pilebar .slots { flex-direction: column; align-items: flex-start; }
-}
+
 
 /* ---------- Sammelstapel ---------- */
 .pilerow {
@@ -529,3 +513,73 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .spile.new small { font-size: .66rem; font-weight: 800; text-align: center; max-width: 9em; line-height: 1.2; }
 .spile.drop-on, .spile.new.drop-on { outline: 4px solid var(--yellow); outline-offset: 2px; }
 @media (min-width: 900px) { .pilerow { --sw: 58px; } }
+
+/* zuletzt bekommene Karte hervorheben */
+.hand .card.new {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--sky), 0 0 26px 8px rgba(63,169,255,.85);
+  animation: newglow 1.4s ease-in-out infinite; transform: translateY(-6px);
+}
+.hand .card.new.sel { transform: translateY(-20px); }
+@keyframes newglow {
+  0%,100% { box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--sky), 0 0 14px 4px rgba(63,169,255,.6); }
+  50% { box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--sky), 0 0 30px 12px rgba(63,169,255,.95); }
+}
+.newbadge {
+  position: absolute; z-index: 3; top: 4%; right: 4%; padding: 1px 6px; border-radius: 999px;
+  background: var(--sky); color: #fff; border: 2px solid #fff; font-family: var(--display); font-size: calc(var(--cw) * .14);
+  letter-spacing: .04em; box-shadow: 0 2px 0 rgba(0,0,0,.25); transform: rotate(8deg);
+}
+.spcards .newbadge, .meld .newbadge { display: none; }
+
+/* ===================== Layout v4 ===================== */
+.game { grid-template-rows: auto auto minmax(0, 1fr); }
+.main { min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 4px 0 0; }
+.handzone { flex: 1 1 0; min-height: 0; margin: 0 10px; }
+.hand { flex: 1 1 0; min-height: 0; }
+.side { flex: none; display: flex; flex-direction: column; min-height: 0; }
+.side .tablezone { max-height: 22vh; padding: 0 10px; }
+.side .dock { padding: 4px 10px 2px; }
+
+/* PC / Tablet quer: Karten links über die volle Höhe, rechts Auslage, Knöpfe und Stapel */
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 30%); gap: 14px; padding: 8px 14px calc(12px + env(safe-area-inset-bottom)); }
+  .handzone { margin: 0; }
+  .side { gap: 10px; min-height: 0; }
+  .side .tablezone {
+    flex: 1 1 0; max-height: none; min-height: 60px; overflow: auto;
+    background: rgba(7,26,92,.35); border: 2px solid var(--line); border-radius: 22px; padding: 10px;
+  }
+  .side .tablezone .meldarea { display: flex !important; flex-direction: column; }
+  .side .dock {
+    flex: none; background: rgba(7,26,92,.55); border: 2px solid var(--line); border-radius: 22px; padding: 10px 12px;
+  }
+  .side .dock .status { font-size: 1rem; }
+  .side .dock .status.mine { font-size: 1.1rem; }
+  .side .dock .actions { padding-bottom: 2px; }
+  .side .pilebar {
+    flex: none; justify-content: center; border: 2px solid rgba(255,255,255,.28); border-top: 3px solid var(--yellow);
+    border-radius: 22px; padding: 10px 12px; gap: 14px;
+  }
+  .side .pilebar .slots { flex-direction: column; align-items: flex-start; }
+}
+@media (orientation: landscape) and (max-height: 640px) {
+  .side .dock .lastlog { display: none; }
+  .side .tablezone { min-height: 40px; }
+}
+
+/* kompakter, solange es keine Sammelstapel gibt */
+.pilerow.empty { padding: 8px 2px 6px; }
+.pilerow.empty .spile.new { min-height: 0; flex-direction: row; gap: 8px; padding: 4px 14px; border-radius: 999px; }
+.pilerow.empty .spile.new span { font-size: 1.2rem; }
+.pilerow.empty .spile.new small { max-width: none; font-size: .74rem; }
+@media (max-width: 600px) {
+  :root { --pw: clamp(46px, 12vw, 60px); }
+  .side .tablezone { max-height: 17vh; }
+  .side .dock .status { font-size: .9rem; }
+  .side .dock .status.mine { font-size: 1rem; }
+  .side .dock .lastlog { font-size: .72rem; }
+  .side .dock .actions { gap: 8px; padding: 4px 0 6px; }
+  .side .dock .actions .btn { min-height: 40px; font-size: .95rem; padding: .35em .9em; }
+  .pilebar { padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .mgroup { padding: 6px 8px 8px; }
+}

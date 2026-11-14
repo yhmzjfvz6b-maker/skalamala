@@ -96,7 +96,7 @@ img { display: block; max-width: 100%; }
 /* ---------- Startseite ---------- */
 .home { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: max(16px, env(safe-area-inset-top)) 16px 32px; gap: 18px; position: relative; overflow-x: hidden; }
 .logo { position: relative; width: min(300px, 62vw); margin-top: 1vh; display: grid; place-items: center; }
-.logo img { position: relative; z-index: 1; width: 100%; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); animation: bob 4.5s ease-in-out infinite; }
+.logo img { position: relative; z-index: 1; width: 100%; height: auto; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); animation: bob 4.5s ease-in-out infinite; }
 .burst { /* Strahlenkranz hinter dem Logo */
   position: absolute; z-index: 0; width: 140%; aspect-ratio: 1; border-radius: 50%;
   background: repeating-conic-gradient(from 0deg, rgba(255,226,94,.20) 0 9deg, transparent 9deg 22deg);
@@ -137,7 +137,7 @@ img { display: block; max-width: 100%; }
 .divider { height: 2px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.3) 0 8px, transparent 8px 14px); margin: 18px 0; }
 
 /* ---------- Lobby ---------- */
-.lobbylogo { width: min(300px, 70vw); filter: drop-shadow(0 8px 14px rgba(0,0,0,.3)); }
+.lobbylogo { width: min(300px, 70vw); height: auto; filter: drop-shadow(0 8px 14px rgba(0,0,0,.3)); }
 .lobby .code {
   font-family: var(--display); font-size: clamp(48px, 14vw, 72px); letter-spacing: .16em; text-align: center; margin: 2px 0 8px;
   color: var(--yellow); text-shadow: 0 3px 0 var(--red-2), 0 6px 0 rgba(4,14,58,.6);
@@ -488,23 +488,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   .tablezone { max-height: none; }
   .players { padding: 6px 10px 2px; }
 }
-@media (min-width: 900px) {
-  .game {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    grid-template-areas: "top top" "players players" "main main" "pile dock";
-  }
-  .topbar { grid-area: top; }
-  .players { grid-area: players; }
-  .main { grid-area: main; }
-  .pilebar { grid-area: pile; justify-content: flex-start; padding-left: 24px; padding-right: 24px; border-top-right-radius: 0; }
-  .dock {
-    grid-area: dock; display: flex; flex-direction: column; justify-content: center;
-    background: linear-gradient(180deg, rgba(7,26,92,.8), rgba(4,14,58,.96)); border-top: 3px solid var(--yellow);
-    padding: 8px 24px calc(8px + env(safe-area-inset-bottom));
-  }
-  .pilebar .slots { flex-direction: column; align-items: flex-start; }
-}
+
 
 /* ---------- Sammelstapel ---------- */
 .pilerow {
@@ -542,6 +526,76 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .spile.new small { font-size: .66rem; font-weight: 800; text-align: center; max-width: 9em; line-height: 1.2; }
 .spile.drop-on, .spile.new.drop-on { outline: 4px solid var(--yellow); outline-offset: 2px; }
 @media (min-width: 900px) { .pilerow { --sw: 58px; } }
+
+/* zuletzt bekommene Karte hervorheben */
+.hand .card.new {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--sky), 0 0 26px 8px rgba(63,169,255,.85);
+  animation: newglow 1.4s ease-in-out infinite; transform: translateY(-6px);
+}
+.hand .card.new.sel { transform: translateY(-20px); }
+@keyframes newglow {
+  0%,100% { box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--sky), 0 0 14px 4px rgba(63,169,255,.6); }
+  50% { box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--sky), 0 0 30px 12px rgba(63,169,255,.95); }
+}
+.newbadge {
+  position: absolute; z-index: 3; top: 4%; right: 4%; padding: 1px 6px; border-radius: 999px;
+  background: var(--sky); color: #fff; border: 2px solid #fff; font-family: var(--display); font-size: calc(var(--cw) * .14);
+  letter-spacing: .04em; box-shadow: 0 2px 0 rgba(0,0,0,.25); transform: rotate(8deg);
+}
+.spcards .newbadge, .meld .newbadge { display: none; }
+
+/* ===================== Layout v4 ===================== */
+.game { grid-template-rows: auto auto minmax(0, 1fr); }
+.main { min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 4px 0 0; }
+.handzone { flex: 1 1 0; min-height: 0; margin: 0 10px; }
+.hand { flex: 1 1 0; min-height: 0; }
+.side { flex: none; display: flex; flex-direction: column; min-height: 0; }
+.side .tablezone { max-height: 22vh; padding: 0 10px; }
+.side .dock { padding: 4px 10px 2px; }
+
+/* PC / Tablet quer: Karten links über die volle Höhe, rechts Auslage, Knöpfe und Stapel */
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 30%); gap: 14px; padding: 8px 14px calc(12px + env(safe-area-inset-bottom)); }
+  .handzone { margin: 0; }
+  .side { gap: 10px; min-height: 0; }
+  .side .tablezone {
+    flex: 1 1 0; max-height: none; min-height: 60px; overflow: auto;
+    background: rgba(7,26,92,.35); border: 2px solid var(--line); border-radius: 22px; padding: 10px;
+  }
+  .side .tablezone .meldarea { display: flex !important; flex-direction: column; }
+  .side .dock {
+    flex: none; background: rgba(7,26,92,.55); border: 2px solid var(--line); border-radius: 22px; padding: 10px 12px;
+  }
+  .side .dock .status { font-size: 1rem; }
+  .side .dock .status.mine { font-size: 1.1rem; }
+  .side .dock .actions { padding-bottom: 2px; }
+  .side .pilebar {
+    flex: none; justify-content: center; border: 2px solid rgba(255,255,255,.28); border-top: 3px solid var(--yellow);
+    border-radius: 22px; padding: 10px 12px; gap: 14px;
+  }
+  .side .pilebar .slots { flex-direction: column; align-items: flex-start; }
+}
+@media (orientation: landscape) and (max-height: 640px) {
+  .side .dock .lastlog { display: none; }
+  .side .tablezone { min-height: 40px; }
+}
+
+/* kompakter, solange es keine Sammelstapel gibt */
+.pilerow.empty { padding: 8px 2px 6px; }
+.pilerow.empty .spile.new { min-height: 0; flex-direction: row; gap: 8px; padding: 4px 14px; border-radius: 999px; }
+.pilerow.empty .spile.new span { font-size: 1.2rem; }
+.pilerow.empty .spile.new small { max-width: none; font-size: .74rem; }
+@media (max-width: 600px) {
+  :root { --pw: clamp(46px, 12vw, 60px); }
+  .side .tablezone { max-height: 17vh; }
+  .side .dock .status { font-size: .9rem; }
+  .side .dock .status.mine { font-size: 1rem; }
+  .side .dock .lastlog { font-size: .72rem; }
+  .side .dock .actions { gap: 8px; padding: 4px 0 6px; }
+  .side .dock .actions .btn { min-height: 40px; font-size: .95rem; padding: .35em .9em; }
+  .pilebar { padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .mgroup { padding: 6px 8px 8px; }
+}
 
 </style>
 </head>
@@ -1319,10 +1373,11 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     const data = `data-id="${c.id}"`;
     if (c.joker) {
       const rep = opts.rep ? `<span class="rep">${E.rankLabel(opts.rep)}</span>` : '';
-      return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jk">${JESTER}<em>JOKER</em></span>${rep}</div>`;
+      return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jk">${JESTER}<em>JOKER</em></span>${rep}${opts.badge ? '<span class="newbadge">NEU</span>' : ''}</div>`;
     }
     const r = E.rankLabel(c.rank), s = E.SUIT_SYM[c.suit];
-    return `<div class="card s-${c.suit} ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span></div>`;
+    const badge = opts.badge ? '<span class="newbadge">NEU</span>' : '';
+    return `<div class="card s-${c.suit} ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span>${badge}</div>`;
   }
 
   const SUIT_ORDER = { S: 0, H: 1, C: 2, D: 3 };
@@ -1367,6 +1422,19 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     if (E.validMeld(cards, 'G') || E.validMeld(cards, 'S')) return { cls: 'part', label: `Stapel (${n})` };
     return { cls: 'bad', label: n === 1 ? 'Stapel (1)' : 'passt nicht' };
   }
+  // Ergeben die ausgewählten Karten (zusammen mit gültigen Stapeln) die Vorgabe? Dann automatisch aufteilen.
+  function contractFromSelection(v) {
+    const R = v.roundInfo;
+    const byId = new Map(v.hand.map((c) => [c.id, c]));
+    const pileIds = new Set([].concat(...ui.piles));
+    const cards = [...new Set(ui.selected.concat(...ui.piles))].map((id) => byId.get(id)).filter(Boolean);
+    if (cards.length < R.slots.reduce((t, x) => t + x.min, 0)) return null;
+    const f = E.findContract(cards, R, true, 8000);
+    if (!f || f.left.length) return null;
+    if (!E.matchContract(f.melds.map((m) => m.cards), R.slots)) return null;
+    return { used: [], auto: true, melds: f.melds.map((m) => m.cards.map((c) => c.id)) };
+  }
+
   // Welche Sammelstapel ergeben zusammen die Vorgabe der Runde?
   function contractFromPiles(v) {
     const R = v.roundInfo, k = R.slots.length;
@@ -1507,6 +1575,15 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     if (ui.screen !== 'game') ui.screen = 'game';
     // Auswahl bereinigen
     const ids = new Set(v.hand.map((c) => c.id));
+    // zuletzt bekommene Karte(n) merken (gezogen, von der Ablage oder beim Klopfen)
+    if (!prev || prev.round !== v.round) ui.newIds = [];
+    else {
+      const old = new Set(prev.hand.map((c) => c.id));
+      const added = v.hand.filter((c) => !old.has(c.id)).map((c) => c.id);
+      if (added.length) ui.newIds = added;
+      else if (v.current === v.seat && v.phase === 'draw' && prev.phase !== 'draw') ui.newIds = [];
+    }
+    ui.newIds = (ui.newIds || []).filter((id) => ids.has(id));
     ui.selected = ui.selected.filter((id) => ids.has(id));
     const key = `${v.round}|${v.current}|${v.phase === 'play' ? 'p' : 'x'}`;
     if (ui.pilesRound !== v.round) { ui.piles = []; ui.pilesRound = v.round; }
@@ -1647,7 +1724,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     const myP = v.players[me];
     const canPlay = myTurn && v.phase === 'play';
     const stagedIds = new Set([].concat(...ui.piles));
-    const contract = !myP.down ? contractFromPiles(v) : null;
+    const contract = !myP.down ? (contractFromPiles(v) || contractFromSelection(v)) : null;
     const handById = new Map(v.hand.map((c) => [c.id, c]));
 
     // Spieler-Leiste
@@ -1720,7 +1797,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     if (ui.selected.length >= 1 && v.phase !== 'roundEnd' && v.phase !== 'gameEnd') actions.unshift(`<button class="btn green" data-a="newPile">＋ Sammelstapel (${ui.selected.length})</button>`);
     if (v.phase === 'roundEnd' || v.phase === 'gameEnd') actions.push(`<button class="btn primary" data-a="showResult">${v.phase === 'gameEnd' ? 'Endergebnis' : 'Rundenergebnis'}</button>`);
     const staging = '';
-    const pileRow = `<div class="pilerow" id="pilerow">
+    const pileRow = `<div class="pilerow ${ui.piles.length ? '' : 'empty'}" id="pilerow">
       ${ui.piles.map((ids, i) => {
         const cards = ids.map((id) => handById.get(id)).filter(Boolean);
         const st = pileStatus(cards, R);
@@ -1731,13 +1808,13 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
           <button class="spx" data-a="dissolve" data-i="${i}" aria-label="Stapel auflösen">✕</button>
         </div>`;
       }).join('')}
-      <div class="spile new" data-pile="new" data-a="newPile"><span>＋</span><small>${ui.piles.length ? 'Stapel' : 'Sammelstapel: Karten hierher ziehen'}</small></div>
+      <div class="spile new" data-pile="new" data-a="newPile"><span>＋</span><small>${ui.piles.length ? 'Stapel' : 'Sammelstapel – Karten hierher ziehen'}</small></div>
     </div>`;
 
     // Hand
     const hand = orderedHand(v.hand.filter((c) => !stagedIds.has(c.id)), v.round);
     const handPts = E.handPoints(v.hand);
-    const handHTML = hand.map((c) => cardHTML(c, { cls: `${ui.selected.includes(c.id) ? 'sel' : ''} ${c.id === v.lastDrawn ? 'new' : ''}` })).join('');
+    const handHTML = hand.map((c) => cardHTML(c, { cls: `${ui.selected.includes(c.id) ? 'sel' : ''} ${(ui.newIds || []).includes(c.id) ? 'new' : ''}`, badge: (ui.newIds || []).includes(c.id) })).join('');
 
     const lastLog = v.log.length ? v.log[v.log.length - 1].msg : '';
     const warn = !R.knock || R.fromHand;
@@ -1768,15 +1845,17 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
           ${pileRow}
           <div class="hand" id="hand">${handHTML}</div>
         </div>
-        <div class="tablezone">${meldArea}</div>
+        <div class="side">
+          <div class="tablezone">${meldArea}</div>
+          <div class="dock">
+            <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
+            <div class="lastlog">${esc(lastLog)}</div>
+            ${staging}
+            <div class="actions">${actions.join('')}</div>
+          </div>
+          <div class="pilebar">${piles}${slots}</div>
+        </div>
       </div>
-      <div class="dock">
-        <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
-        <div class="lastlog">${esc(lastLog)}</div>
-        ${staging}
-        <div class="actions">${actions.join('')}</div>
-      </div>
-      <div class="pilebar">${piles}${slots}</div>
     </div>
     ${renderKnockPrompt(v)}`;
     layoutHand();
@@ -1808,7 +1887,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     if (!n) return;
     const W = el.clientWidth - 4, H = el.clientHeight - 26;
     const gap = W < 520 ? 6 : 10;
-    const maxCw = W < 520 ? 104 : 150;
+    const maxCw = W < 520 ? 104 : 170;
     let cw = 34;
     for (let c = maxCw; c >= 34; c -= 2) {
       const cols = Math.max(1, Math.floor((W + gap) / (c + gap)));
@@ -2076,7 +2155,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       }
       case 'dissolve': ui.piles.splice(+el.dataset.i, 1); return render();
       case 'layDown': {
-        const c = contractFromPiles(v);
+        const c = contractFromPiles(v) || contractFromSelection(v);
         if (!c) return toast(`Deine Sammelstapel erfüllen die Vorgabe noch nicht: ${v.roundInfo.slots.map(E.slotLabel).join(' + ')}`, 3200);
         ui.selected = [];
         return ui.ctl.act({ type: 'layDown', melds: c.melds });

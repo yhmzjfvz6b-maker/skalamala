@@ -43,10 +43,11 @@
     const data = `data-id="${c.id}"`;
     if (c.joker) {
       const rep = opts.rep ? `<span class="rep">${E.rankLabel(opts.rep)}</span>` : '';
-      return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jk">${JESTER}<em>JOKER</em></span>${rep}</div>`;
+      return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jk">${JESTER}<em>JOKER</em></span>${rep}${opts.badge ? '<span class="newbadge">NEU</span>' : ''}</div>`;
     }
     const r = E.rankLabel(c.rank), s = E.SUIT_SYM[c.suit];
-    return `<div class="card s-${c.suit} ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span></div>`;
+    const badge = opts.badge ? '<span class="newbadge">NEU</span>' : '';
+    return `<div class="card s-${c.suit} ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span>${badge}</div>`;
   }
 
   const SUIT_ORDER = { S: 0, H: 1, C: 2, D: 3 };
@@ -91,6 +92,19 @@
     if (E.validMeld(cards, 'G') || E.validMeld(cards, 'S')) return { cls: 'part', label: `Stapel (${n})` };
     return { cls: 'bad', label: n === 1 ? 'Stapel (1)' : 'passt nicht' };
   }
+  // Ergeben die ausgewählten Karten (zusammen mit gültigen Stapeln) die Vorgabe? Dann automatisch aufteilen.
+  function contractFromSelection(v) {
+    const R = v.roundInfo;
+    const byId = new Map(v.hand.map((c) => [c.id, c]));
+    const pileIds = new Set([].concat(...ui.piles));
+    const cards = [...new Set(ui.selected.concat(...ui.piles))].map((id) => byId.get(id)).filter(Boolean);
+    if (cards.length < R.slots.reduce((t, x) => t + x.min, 0)) return null;
+    const f = E.findContract(cards, R, true, 8000);
+    if (!f || f.left.length) return null;
+    if (!E.matchContract(f.melds.map((m) => m.cards), R.slots)) return null;
+    return { used: [], auto: true, melds: f.melds.map((m) => m.cards.map((c) => c.id)) };
+  }
+
   // Welche Sammelstapel ergeben zusammen die Vorgabe der Runde?
   function contractFromPiles(v) {
     const R = v.roundInfo, k = R.slots.length;
@@ -231,6 +245,15 @@
     if (ui.screen !== 'game') ui.screen = 'game';
     // Auswahl bereinigen
     const ids = new Set(v.hand.map((c) => c.id));
+    // zuletzt bekommene Karte(n) merken (gezogen, von der Ablage oder beim Klopfen)
+    if (!prev || prev.round !== v.round) ui.newIds = [];
+    else {
+      const old = new Set(prev.hand.map((c) => c.id));
+      const added = v.hand.filter((c) => !old.has(c.id)).map((c) => c.id);
+      if (added.length) ui.newIds = added;
+      else if (v.current === v.seat && v.phase === 'draw' && prev.phase !== 'draw') ui.newIds = [];
+    }
+    ui.newIds = (ui.newIds || []).filter((id) => ids.has(id));
     ui.selected = ui.selected.filter((id) => ids.has(id));
     const key = `${v.round}|${v.current}|${v.phase === 'play' ? 'p' : 'x'}`;
     if (ui.pilesRound !== v.round) { ui.piles = []; ui.pilesRound = v.round; }
@@ -371,7 +394,7 @@
     const myP = v.players[me];
     const canPlay = myTurn && v.phase === 'play';
     const stagedIds = new Set([].concat(...ui.piles));
-    const contract = !myP.down ? contractFromPiles(v) : null;
+    const contract = !myP.down ? (contractFromPiles(v) || contractFromSelection(v)) : null;
     const handById = new Map(v.hand.map((c) => [c.id, c]));
 
     // Spieler-Leiste
@@ -444,7 +467,7 @@
     if (ui.selected.length >= 1 && v.phase !== 'roundEnd' && v.phase !== 'gameEnd') actions.unshift(`<button class="btn green" data-a="newPile">＋ Sammelstapel (${ui.selected.length})</button>`);
     if (v.phase === 'roundEnd' || v.phase === 'gameEnd') actions.push(`<button class="btn primary" data-a="showResult">${v.phase === 'gameEnd' ? 'Endergebnis' : 'Rundenergebnis'}</button>`);
     const staging = '';
-    const pileRow = `<div class="pilerow" id="pilerow">
+    const pileRow = `<div class="pilerow ${ui.piles.length ? '' : 'empty'}" id="pilerow">
       ${ui.piles.map((ids, i) => {
         const cards = ids.map((id) => handById.get(id)).filter(Boolean);
         const st = pileStatus(cards, R);
@@ -455,13 +478,13 @@
           <button class="spx" data-a="dissolve" data-i="${i}" aria-label="Stapel auflösen">✕</button>
         </div>`;
       }).join('')}
-      <div class="spile new" data-pile="new" data-a="newPile"><span>＋</span><small>${ui.piles.length ? 'Stapel' : 'Sammelstapel: Karten hierher ziehen'}</small></div>
+      <div class="spile new" data-pile="new" data-a="newPile"><span>＋</span><small>${ui.piles.length ? 'Stapel' : 'Sammelstapel – Karten hierher ziehen'}</small></div>
     </div>`;
 
     // Hand
     const hand = orderedHand(v.hand.filter((c) => !stagedIds.has(c.id)), v.round);
     const handPts = E.handPoints(v.hand);
-    const handHTML = hand.map((c) => cardHTML(c, { cls: `${ui.selected.includes(c.id) ? 'sel' : ''} ${c.id === v.lastDrawn ? 'new' : ''}` })).join('');
+    const handHTML = hand.map((c) => cardHTML(c, { cls: `${ui.selected.includes(c.id) ? 'sel' : ''} ${(ui.newIds || []).includes(c.id) ? 'new' : ''}`, badge: (ui.newIds || []).includes(c.id) })).join('');
 
     const lastLog = v.log.length ? v.log[v.log.length - 1].msg : '';
     const warn = !R.knock || R.fromHand;
@@ -492,15 +515,17 @@
           ${pileRow}
           <div class="hand" id="hand">${handHTML}</div>
         </div>
-        <div class="tablezone">${meldArea}</div>
+        <div class="side">
+          <div class="tablezone">${meldArea}</div>
+          <div class="dock">
+            <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
+            <div class="lastlog">${esc(lastLog)}</div>
+            ${staging}
+            <div class="actions">${actions.join('')}</div>
+          </div>
+          <div class="pilebar">${piles}${slots}</div>
+        </div>
       </div>
-      <div class="dock">
-        <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
-        <div class="lastlog">${esc(lastLog)}</div>
-        ${staging}
-        <div class="actions">${actions.join('')}</div>
-      </div>
-      <div class="pilebar">${piles}${slots}</div>
     </div>
     ${renderKnockPrompt(v)}`;
     layoutHand();
@@ -532,7 +557,7 @@
     if (!n) return;
     const W = el.clientWidth - 4, H = el.clientHeight - 26;
     const gap = W < 520 ? 6 : 10;
-    const maxCw = W < 520 ? 104 : 150;
+    const maxCw = W < 520 ? 104 : 170;
     let cw = 34;
     for (let c = maxCw; c >= 34; c -= 2) {
       const cols = Math.max(1, Math.floor((W + gap) / (c + gap)));
@@ -800,7 +825,7 @@
       }
       case 'dissolve': ui.piles.splice(+el.dataset.i, 1); return render();
       case 'layDown': {
-        const c = contractFromPiles(v);
+        const c = contractFromPiles(v) || contractFromSelection(v);
         if (!c) return toast(`Deine Sammelstapel erfüllen die Vorgabe noch nicht: ${v.roundInfo.slots.map(E.slotLabel).join(' + ')}`, 3200);
         ui.selected = [];
         return ui.ctl.act({ type: 'layDown', melds: c.melds });
