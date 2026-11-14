@@ -42,20 +42,22 @@
   }
 
   // ---------- Runden ----------
-  const G = (min) => ({ t: 'G', min });
-  const S = (min) => ({ t: 'S', min });
+  // exact: beim ersten Auslegen genau so viele Karten (ohne „mind.“)
+  const G = (min, exact) => ({ t: 'G', min, exact: !!exact });
+  const S = (min, exact) => ({ t: 'S', min, exact: !!exact });
   const ROUNDS = [
-    { n: 1, title: '1 Gruppe + 1 Sequenz', detail: 'Gruppe (3 Karten) und Sequenz (4 Karten)', slots: [G(3), S(4)], knock: true, fromHand: false },
-    { n: 2, title: '3 Gruppen', detail: '3 Gruppen à 3 Karten', slots: [G(3), G(3), G(3)], knock: true, fromHand: false },
+    { n: 1, title: '1 Gruppe + 1 Sequenz', detail: 'Gruppe (3 Karten) und Sequenz (4 Karten)', slots: [G(3, 1), S(4, 1)], knock: true, fromHand: false },
+    { n: 2, title: '3 Gruppen', detail: '3 Gruppen à 3 Karten', slots: [G(3, 1), G(3, 1), G(3, 1)], knock: true, fromHand: false },
     { n: 3, title: '2 Sequenzen', detail: '2 Sequenzen, mind. 4 Karten', slots: [S(4), S(4)], knock: true, fromHand: false },
-    { n: 4, title: '2 Gruppen à 5', detail: '2 Gruppen à 5 Karten', slots: [G(5), G(5)], knock: true, fromHand: false },
-    { n: 5, title: 'Skalamala', detail: '10er-Sequenz abwechselnd rot – schwarz', slots: [{ t: 'A', min: 10 }], knock: true, fromHand: false },
-    { n: 6, title: '5 Gruppen à 2', detail: '5 Paare – OHNE KLOPFEN!', slots: [G(2), G(2), G(2), G(2), G(2)], knock: false, fromHand: false },
+    { n: 4, title: '2 Gruppen à 5', detail: '2 Gruppen à 5 Karten', slots: [G(5, 1), G(5, 1)], knock: true, fromHand: false },
+    { n: 5, title: 'Skalamala', detail: '10er-Sequenz abwechselnd rot – schwarz', slots: [{ t: 'A', min: 10, exact: true }], knock: true, fromHand: false },
+    { n: 6, title: '5 Gruppen à 2', detail: '5 Paare – OHNE KLOPFEN!', slots: [G(2, 1), G(2, 1), G(2, 1), G(2, 1), G(2, 1)], knock: false, fromHand: false },
     { n: 7, title: '2 Gruppen + 1 Sequenz', detail: 'aus der Hand ausmachen', slots: [G(3), G(3), S(4)], knock: true, fromHand: true },
     { n: 8, title: '1 Gruppe + 2 Sequenzen', detail: 'aus der Hand ausmachen – Finale!', slots: [G(3), S(4), S(4)], knock: true, fromHand: true },
   ];
   const TYPE_NAME = { G: 'Gruppe', S: 'Sequenz', A: 'Skalamala' };
-  const slotLabel = (sl) => (sl.t === 'G' ? `Gruppe (${sl.min})` : sl.t === 'S' ? `Sequenz (${sl.min}+)` : `Skalamala (${sl.min})`);
+  const slotLabel = (sl) => `${TYPE_NAME[sl.t]} (${sl.exact ? '' : 'mind. '}${sl.min})`;
+  const fitsSlot = (cards, sl) => (!sl.exact || cards.length === sl.min) && !!validMeld(cards, sl.t, sl.min);
 
   // ---------- Kombinationen prüfen ----------
   // Ordnet eine Sequenz. alt=true: Farben abwechselnd rot/schwarz, beliebige Farben (Pik/Herz…)
@@ -128,7 +130,7 @@
       if (i === meldCards.length) return true;
       for (let k = 0; k < slots.length; k++) {
         if (used[k]) continue;
-        if (validMeld(meldCards[i], slots[k].t, slots[k].min)) {
+        if (fitsSlot(meldCards[i], slots[k])) {
           used[k] = true; res[i] = slots[k].t;
           if (bt(i + 1)) return true;
           used[k] = false;
@@ -167,13 +169,14 @@
     s.round++;
     if (s.round > 0) s.dealer = (s.dealer + 1) % s.players.length;
     const deck = shuffle(makeDeck());
-    s.players.forEach((p) => { p.hand = []; p.down = false; });
+    s.players.forEach((p) => { p.hand = []; p.down = false; p.downTurn = -1; });
     const n = s.players.length;
     for (let k = 0; k < 11; k++) for (let i = 1; i <= n; i++) s.players[(s.dealer + i) % n].hand.push(deck.pop());
     s.stock = deck;
     s.discard = [s.stock.pop()];
     s.discardBy = null;
     s.reshuffles = 0;
+    s.turn = 0;
     s.taken = {};
     s.melds = [];
     s.current = (s.dealer + 1) % n;
@@ -263,6 +266,7 @@
 
   function nextTurn(s) {
     s.current = (s.current + 1) % s.players.length;
+    s.turn = (s.turn || 0) + 1;
     s.phase = 'draw';
     s.knock = { responses: {}, deadline: 0, order: [] };
     s.lastDrawn = null;
@@ -362,7 +366,7 @@
       if (!cards) return 'Karten nicht auf der Hand';
       const meldCards = a.melds.map((ids) => ids.map((id) => cards.find((c) => c.id === id)));
       const types = matchContract(meldCards, R.slots);
-      if (!types) return `Das erfüllt die Vorgabe nicht: ${R.slots.map(slotLabel).join(' + ')}`;
+      if (!types) return `Beim Auslegen genau die Vorgabe: ${R.slots.map(slotLabel).join(' + ')}. Weitere Karten danach anlegen – bei Gegenspielern sofort, bei dir erst im nächsten Zug.`;
       const left = p.hand.length - cards.length;
       if (R.fromHand && left > 1) return 'In dieser Runde muss komplett aus der Hand ausgemacht werden (höchstens 1 Karte zum Abwerfen übrig).';
       removeFromHand(p, cards);
@@ -371,6 +375,7 @@
         s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) });
       });
       p.down = true;
+      p.downTurn = s.turn;
       log(s, `${p.name} legt aus: ${types.map((t) => TYPE_NAME[t]).join(', ')}.`);
       if (R.fromHand) {
         if (p.hand.length === 1) {
@@ -389,6 +394,7 @@
       if (!p.down) return 'Erst die Vorgabe auslegen, dann anlegen';
       const m = s.melds.find((x) => x.id === a.meldId);
       if (!m) return 'Kombination nicht gefunden';
+      if (m.owner === seat && p.downTurn === s.turn) return 'An deine eigenen Kombinationen darfst du erst ab deinem nächsten Zug anlegen – an die der Gegenspieler sofort.';
       const ids = a.cardIds || (a.cardId != null ? [a.cardId] : []);
       const cards = takeFromHand(p, ids);
       if (!cards || !cards.length) return 'Karten nicht auf der Hand';
@@ -435,6 +441,7 @@
       stockCount: s.stock.length,
       reshuffles: s.reshuffles,
       lastDrawn: seat === s.current ? s.lastDrawn : null,
+      ownLocked: seat != null && s.players[seat] ? (s.players[seat].down && s.players[seat].downTurn === s.turn) : false,
       knock: {
         responses: Object.assign({}, s.knock.responses),
         first: firstKnocker(s),
@@ -586,8 +593,10 @@
     return { card: best || hand[0], score: bestScore };
   }
 
-  function canLayOffAny(s, c) {
-    return s.melds.find((m) => validMeld(m.cards.concat([c]), m.t));
+  function canLayOffAny(s, c, seat) {
+    const p = seat != null ? s.players[seat] : null;
+    const locked = p && p.downTurn === s.turn;
+    return s.melds.find((m) => !(locked && m.owner === seat) && validMeld(m.cards.concat([c]), m.t));
   }
 
   function botAction(s, seat) {
@@ -617,7 +626,7 @@
       if (!c) return { type: 'drawStock' };
       if ((s.taken[c.id] || 0) >= 2) return { type: 'drawStock' };
       if (c.joker) return { type: 'takeDiscard' };
-      if (p.down) return canLayOffAny(s, c) ? { type: 'takeDiscard' } : { type: 'drawStock' };
+      if (p.down) return canLayOffAny(s, c, seat) ? { type: 'takeDiscard' } : { type: 'drawStock' };
       const before = findContract(p.hand, R, R.fromHand);
       const okBefore = before && (!R.fromHand || before.left.length <= 1);
       if (!okBefore) {
@@ -640,7 +649,7 @@
         if (f && (!R.fromHand || f.left.length <= 1)) return { type: 'layDown', melds: f.melds.map((m) => m.cards.map((c) => c.id)) };
       } else {
         for (const c of p.hand) {
-          const m = canLayOffAny(s, c);
+          const m = canLayOffAny(s, c, seat);
           if (m) return { type: 'layOff', cardIds: [c.id], meldId: m.id };
         }
       }
@@ -718,6 +727,6 @@
 
   return {
     SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, isRed, rankLabel, cardLabel, cardPoints, handPoints,
-    validMeld, matchContract, slotLabel, newGame, act, view, botAction, findContract, GameHost, canKnock,
+    validMeld, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock,
   };
 });

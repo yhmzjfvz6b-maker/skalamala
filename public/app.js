@@ -80,7 +80,8 @@
   function pileStatus(cards, R) {
     const n = cards.length;
     if (n === 1) return { cls: 'part', label: 'Stapel (1)' };
-    for (const sl of R.slots) if (E.validMeld(cards, sl.t, sl.min)) return { cls: 'ok', label: `✓ ${E.TYPE_NAME[sl.t]}` };
+    for (const sl of R.slots) if (E.fitsSlot(cards, sl)) return { cls: 'ok', label: `✓ ${E.TYPE_NAME[sl.t]}` };
+    for (const sl of R.slots) if (sl.exact && n > sl.min && E.validMeld(cards, sl.t, sl.min)) return { cls: 'bad', label: `${E.TYPE_NAME[sl.t]}: nur ${sl.min} Karten!` };
     const types = [...new Set(R.slots.map((x) => x.t))];
     for (const t of types) {
       if (E.validMeld(cards, t)) {
@@ -99,7 +100,7 @@
     const pileIds = new Set([].concat(...ui.piles));
     const cards = [...new Set(ui.selected.concat(...ui.piles))].map((id) => byId.get(id)).filter(Boolean);
     if (cards.length < R.slots.reduce((t, x) => t + x.min, 0)) return null;
-    const f = E.findContract(cards, R, true, 8000);
+    const f = E.findContract(cards, R, R.slots.some((x) => !x.exact), 8000);
     if (!f || f.left.length) return null;
     if (!E.matchContract(f.melds.map((m) => m.cards), R.slots)) return null;
     return { used: [], auto: true, melds: f.melds.map((m) => m.cards.map((c) => c.id)) };
@@ -131,7 +132,7 @@
     const bt = (i) => {
       if (i === melds.length) return true;
       for (let k = 0; k < slots.length; k++) {
-        if (used[k] || !E.validMeld(melds[i], slots[k].t, slots[k].min)) continue;
+        if (used[k] || !E.fitsSlot(melds[i], slots[k])) continue;
         used[k] = true;
         if (bt(i + 1)) return true;
         used[k] = false;
@@ -382,7 +383,8 @@
     if (v.current === me) {
       if (v.phase === 'draw') return { t: 'Du bist dran – zieh eine Karte (Stapel oder Ablage)', mine: true };
       const p = v.players[me];
-      if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Kombinationen bilden und auslegen – oder abwerfen', mine: true };
+      if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Genau die Vorgabe auslegen – oder abwerfen', mine: true };
+      if (v.ownLocked) return { t: 'Ausgelegt! Jetzt abwerfen – anlegen nur bei Gegenspielern, bei dir erst im nächsten Zug', mine: true };
       return { t: 'Anlegen: Karte wählen, dann auf eine Kombination tippen – zum Schluss abwerfen', mine: true };
     }
     return { t: `${cur.name} ist dran${v.phase === 'draw' ? ' (zieht)' : ''}…`, mine: false };
@@ -444,7 +446,7 @@
       if (!ms.length) continue;
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
-          const ok = layTarget && E.validMeld(m.cards.concat(ui.selected.map((id) => handById.get(id))), m.t);
+          const ok = layTarget && !(v.ownLocked && m.owner === me) && E.validMeld(m.cards.concat(ui.selected.map((id) => handById.get(id))), m.t);
           return `<div class="meld ${ok ? 'target' : ''}" data-meld="${m.id}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, { rep: c.joker ? m.ranks[k] : 0 })).join('')}</div>`;
         }).join('')}
       </div></div>`);
@@ -592,7 +594,8 @@
         <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3), aber nicht herum (K-A-2).</li>
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
         <li><b>Joker</b> ersetzen jede beliebige Karte – auch mehrere Joker in einer Kombination sind erlaubt.</li>
-        <li>Pro Runde wird <b>genau die Vorgabe</b> ausgelegt, keine weiteren Kombinationen. Danach darf man nur noch <b>anlegen</b> – an eigene und fremde Kombinationen.</li>
+        <li>Beim <b>ersten Auslegen</b> wird <b>genau die Vorgabe</b> ausgelegt – z. B. in Runde 1 genau eine Gruppe aus 3 Karten und eine Sequenz aus 4 Karten. Steht „mind.“ dabei, darf die Kombination länger sein.</li>
+        <li>Im selben Zug darf man danach nur bei den <b>Gegenspielern</b> anlegen. An die <b>eigenen</b> Kombinationen erst ab dem nächsten Zug.</li>
       </ul>
       <h3>Die 8 Runden</h3>
       <ol>${E.ROUNDS.map((r) => `<li><b>${esc(r.title)}</b> – ${esc(r.detail)}</li>`).join('')}</ol>

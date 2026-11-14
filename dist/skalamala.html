@@ -754,20 +754,22 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   }
 
   // ---------- Runden ----------
-  const G = (min) => ({ t: 'G', min });
-  const S = (min) => ({ t: 'S', min });
+  // exact: beim ersten Auslegen genau so viele Karten (ohne „mind.“)
+  const G = (min, exact) => ({ t: 'G', min, exact: !!exact });
+  const S = (min, exact) => ({ t: 'S', min, exact: !!exact });
   const ROUNDS = [
-    { n: 1, title: '1 Gruppe + 1 Sequenz', detail: 'Gruppe (3 Karten) und Sequenz (4 Karten)', slots: [G(3), S(4)], knock: true, fromHand: false },
-    { n: 2, title: '3 Gruppen', detail: '3 Gruppen à 3 Karten', slots: [G(3), G(3), G(3)], knock: true, fromHand: false },
+    { n: 1, title: '1 Gruppe + 1 Sequenz', detail: 'Gruppe (3 Karten) und Sequenz (4 Karten)', slots: [G(3, 1), S(4, 1)], knock: true, fromHand: false },
+    { n: 2, title: '3 Gruppen', detail: '3 Gruppen à 3 Karten', slots: [G(3, 1), G(3, 1), G(3, 1)], knock: true, fromHand: false },
     { n: 3, title: '2 Sequenzen', detail: '2 Sequenzen, mind. 4 Karten', slots: [S(4), S(4)], knock: true, fromHand: false },
-    { n: 4, title: '2 Gruppen à 5', detail: '2 Gruppen à 5 Karten', slots: [G(5), G(5)], knock: true, fromHand: false },
-    { n: 5, title: 'Skalamala', detail: '10er-Sequenz abwechselnd rot – schwarz', slots: [{ t: 'A', min: 10 }], knock: true, fromHand: false },
-    { n: 6, title: '5 Gruppen à 2', detail: '5 Paare – OHNE KLOPFEN!', slots: [G(2), G(2), G(2), G(2), G(2)], knock: false, fromHand: false },
+    { n: 4, title: '2 Gruppen à 5', detail: '2 Gruppen à 5 Karten', slots: [G(5, 1), G(5, 1)], knock: true, fromHand: false },
+    { n: 5, title: 'Skalamala', detail: '10er-Sequenz abwechselnd rot – schwarz', slots: [{ t: 'A', min: 10, exact: true }], knock: true, fromHand: false },
+    { n: 6, title: '5 Gruppen à 2', detail: '5 Paare – OHNE KLOPFEN!', slots: [G(2, 1), G(2, 1), G(2, 1), G(2, 1), G(2, 1)], knock: false, fromHand: false },
     { n: 7, title: '2 Gruppen + 1 Sequenz', detail: 'aus der Hand ausmachen', slots: [G(3), G(3), S(4)], knock: true, fromHand: true },
     { n: 8, title: '1 Gruppe + 2 Sequenzen', detail: 'aus der Hand ausmachen – Finale!', slots: [G(3), S(4), S(4)], knock: true, fromHand: true },
   ];
   const TYPE_NAME = { G: 'Gruppe', S: 'Sequenz', A: 'Skalamala' };
-  const slotLabel = (sl) => (sl.t === 'G' ? `Gruppe (${sl.min})` : sl.t === 'S' ? `Sequenz (${sl.min}+)` : `Skalamala (${sl.min})`);
+  const slotLabel = (sl) => `${TYPE_NAME[sl.t]} (${sl.exact ? '' : 'mind. '}${sl.min})`;
+  const fitsSlot = (cards, sl) => (!sl.exact || cards.length === sl.min) && !!validMeld(cards, sl.t, sl.min);
 
   // ---------- Kombinationen prüfen ----------
   // Ordnet eine Sequenz. alt=true: Farben abwechselnd rot/schwarz, beliebige Farben (Pik/Herz…)
@@ -840,7 +842,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       if (i === meldCards.length) return true;
       for (let k = 0; k < slots.length; k++) {
         if (used[k]) continue;
-        if (validMeld(meldCards[i], slots[k].t, slots[k].min)) {
+        if (fitsSlot(meldCards[i], slots[k])) {
           used[k] = true; res[i] = slots[k].t;
           if (bt(i + 1)) return true;
           used[k] = false;
@@ -879,13 +881,14 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     s.round++;
     if (s.round > 0) s.dealer = (s.dealer + 1) % s.players.length;
     const deck = shuffle(makeDeck());
-    s.players.forEach((p) => { p.hand = []; p.down = false; });
+    s.players.forEach((p) => { p.hand = []; p.down = false; p.downTurn = -1; });
     const n = s.players.length;
     for (let k = 0; k < 11; k++) for (let i = 1; i <= n; i++) s.players[(s.dealer + i) % n].hand.push(deck.pop());
     s.stock = deck;
     s.discard = [s.stock.pop()];
     s.discardBy = null;
     s.reshuffles = 0;
+    s.turn = 0;
     s.taken = {};
     s.melds = [];
     s.current = (s.dealer + 1) % n;
@@ -975,6 +978,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 
   function nextTurn(s) {
     s.current = (s.current + 1) % s.players.length;
+    s.turn = (s.turn || 0) + 1;
     s.phase = 'draw';
     s.knock = { responses: {}, deadline: 0, order: [] };
     s.lastDrawn = null;
@@ -1074,7 +1078,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       if (!cards) return 'Karten nicht auf der Hand';
       const meldCards = a.melds.map((ids) => ids.map((id) => cards.find((c) => c.id === id)));
       const types = matchContract(meldCards, R.slots);
-      if (!types) return `Das erfüllt die Vorgabe nicht: ${R.slots.map(slotLabel).join(' + ')}`;
+      if (!types) return `Beim Auslegen genau die Vorgabe: ${R.slots.map(slotLabel).join(' + ')}. Weitere Karten danach anlegen – bei Gegenspielern sofort, bei dir erst im nächsten Zug.`;
       const left = p.hand.length - cards.length;
       if (R.fromHand && left > 1) return 'In dieser Runde muss komplett aus der Hand ausgemacht werden (höchstens 1 Karte zum Abwerfen übrig).';
       removeFromHand(p, cards);
@@ -1083,6 +1087,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
         s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) });
       });
       p.down = true;
+      p.downTurn = s.turn;
       log(s, `${p.name} legt aus: ${types.map((t) => TYPE_NAME[t]).join(', ')}.`);
       if (R.fromHand) {
         if (p.hand.length === 1) {
@@ -1101,6 +1106,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       if (!p.down) return 'Erst die Vorgabe auslegen, dann anlegen';
       const m = s.melds.find((x) => x.id === a.meldId);
       if (!m) return 'Kombination nicht gefunden';
+      if (m.owner === seat && p.downTurn === s.turn) return 'An deine eigenen Kombinationen darfst du erst ab deinem nächsten Zug anlegen – an die der Gegenspieler sofort.';
       const ids = a.cardIds || (a.cardId != null ? [a.cardId] : []);
       const cards = takeFromHand(p, ids);
       if (!cards || !cards.length) return 'Karten nicht auf der Hand';
@@ -1147,6 +1153,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       stockCount: s.stock.length,
       reshuffles: s.reshuffles,
       lastDrawn: seat === s.current ? s.lastDrawn : null,
+      ownLocked: seat != null && s.players[seat] ? (s.players[seat].down && s.players[seat].downTurn === s.turn) : false,
       knock: {
         responses: Object.assign({}, s.knock.responses),
         first: firstKnocker(s),
@@ -1298,8 +1305,10 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     return { card: best || hand[0], score: bestScore };
   }
 
-  function canLayOffAny(s, c) {
-    return s.melds.find((m) => validMeld(m.cards.concat([c]), m.t));
+  function canLayOffAny(s, c, seat) {
+    const p = seat != null ? s.players[seat] : null;
+    const locked = p && p.downTurn === s.turn;
+    return s.melds.find((m) => !(locked && m.owner === seat) && validMeld(m.cards.concat([c]), m.t));
   }
 
   function botAction(s, seat) {
@@ -1329,7 +1338,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       if (!c) return { type: 'drawStock' };
       if ((s.taken[c.id] || 0) >= 2) return { type: 'drawStock' };
       if (c.joker) return { type: 'takeDiscard' };
-      if (p.down) return canLayOffAny(s, c) ? { type: 'takeDiscard' } : { type: 'drawStock' };
+      if (p.down) return canLayOffAny(s, c, seat) ? { type: 'takeDiscard' } : { type: 'drawStock' };
       const before = findContract(p.hand, R, R.fromHand);
       const okBefore = before && (!R.fromHand || before.left.length <= 1);
       if (!okBefore) {
@@ -1352,7 +1361,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
         if (f && (!R.fromHand || f.left.length <= 1)) return { type: 'layDown', melds: f.melds.map((m) => m.cards.map((c) => c.id)) };
       } else {
         for (const c of p.hand) {
-          const m = canLayOffAny(s, c);
+          const m = canLayOffAny(s, c, seat);
           if (m) return { type: 'layOff', cardIds: [c.id], meldId: m.id };
         }
       }
@@ -1430,7 +1439,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 
   return {
     SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, isRed, rankLabel, cardLabel, cardPoints, handPoints,
-    validMeld, matchContract, slotLabel, newGame, act, view, botAction, findContract, GameHost, canKnock,
+    validMeld, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock,
   };
 });
 
@@ -1518,7 +1527,8 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   function pileStatus(cards, R) {
     const n = cards.length;
     if (n === 1) return { cls: 'part', label: 'Stapel (1)' };
-    for (const sl of R.slots) if (E.validMeld(cards, sl.t, sl.min)) return { cls: 'ok', label: `✓ ${E.TYPE_NAME[sl.t]}` };
+    for (const sl of R.slots) if (E.fitsSlot(cards, sl)) return { cls: 'ok', label: `✓ ${E.TYPE_NAME[sl.t]}` };
+    for (const sl of R.slots) if (sl.exact && n > sl.min && E.validMeld(cards, sl.t, sl.min)) return { cls: 'bad', label: `${E.TYPE_NAME[sl.t]}: nur ${sl.min} Karten!` };
     const types = [...new Set(R.slots.map((x) => x.t))];
     for (const t of types) {
       if (E.validMeld(cards, t)) {
@@ -1537,7 +1547,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     const pileIds = new Set([].concat(...ui.piles));
     const cards = [...new Set(ui.selected.concat(...ui.piles))].map((id) => byId.get(id)).filter(Boolean);
     if (cards.length < R.slots.reduce((t, x) => t + x.min, 0)) return null;
-    const f = E.findContract(cards, R, true, 8000);
+    const f = E.findContract(cards, R, R.slots.some((x) => !x.exact), 8000);
     if (!f || f.left.length) return null;
     if (!E.matchContract(f.melds.map((m) => m.cards), R.slots)) return null;
     return { used: [], auto: true, melds: f.melds.map((m) => m.cards.map((c) => c.id)) };
@@ -1569,7 +1579,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     const bt = (i) => {
       if (i === melds.length) return true;
       for (let k = 0; k < slots.length; k++) {
-        if (used[k] || !E.validMeld(melds[i], slots[k].t, slots[k].min)) continue;
+        if (used[k] || !E.fitsSlot(melds[i], slots[k])) continue;
         used[k] = true;
         if (bt(i + 1)) return true;
         used[k] = false;
@@ -1820,7 +1830,8 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
     if (v.current === me) {
       if (v.phase === 'draw') return { t: 'Du bist dran – zieh eine Karte (Stapel oder Ablage)', mine: true };
       const p = v.players[me];
-      if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Kombinationen bilden und auslegen – oder abwerfen', mine: true };
+      if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Genau die Vorgabe auslegen – oder abwerfen', mine: true };
+      if (v.ownLocked) return { t: 'Ausgelegt! Jetzt abwerfen – anlegen nur bei Gegenspielern, bei dir erst im nächsten Zug', mine: true };
       return { t: 'Anlegen: Karte wählen, dann auf eine Kombination tippen – zum Schluss abwerfen', mine: true };
     }
     return { t: `${cur.name} ist dran${v.phase === 'draw' ? ' (zieht)' : ''}…`, mine: false };
@@ -1882,7 +1893,7 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
       if (!ms.length) continue;
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
-          const ok = layTarget && E.validMeld(m.cards.concat(ui.selected.map((id) => handById.get(id))), m.t);
+          const ok = layTarget && !(v.ownLocked && m.owner === me) && E.validMeld(m.cards.concat(ui.selected.map((id) => handById.get(id))), m.t);
           return `<div class="meld ${ok ? 'target' : ''}" data-meld="${m.id}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, { rep: c.joker ? m.ranks[k] : 0 })).join('')}</div>`;
         }).join('')}
       </div></div>`);
@@ -2030,7 +2041,8 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
         <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3), aber nicht herum (K-A-2).</li>
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
         <li><b>Joker</b> ersetzen jede beliebige Karte – auch mehrere Joker in einer Kombination sind erlaubt.</li>
-        <li>Pro Runde wird <b>genau die Vorgabe</b> ausgelegt, keine weiteren Kombinationen. Danach darf man nur noch <b>anlegen</b> – an eigene und fremde Kombinationen.</li>
+        <li>Beim <b>ersten Auslegen</b> wird <b>genau die Vorgabe</b> ausgelegt – z. B. in Runde 1 genau eine Gruppe aus 3 Karten und eine Sequenz aus 4 Karten. Steht „mind.“ dabei, darf die Kombination länger sein.</li>
+        <li>Im selben Zug darf man danach nur bei den <b>Gegenspielern</b> anlegen. An die <b>eigenen</b> Kombinationen erst ab dem nächsten Zug.</li>
       </ul>
       <h3>Die 8 Runden</h3>
       <ol>${E.ROUNDS.map((r) => `<li><b>${esc(r.title)}</b> – ${esc(r.detail)}</li>`).join('')}</ol>

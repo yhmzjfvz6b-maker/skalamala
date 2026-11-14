@@ -66,8 +66,9 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 - **Die 9 zählt 5 Punkte** (Funktion `cardPoints`).
 - **Ass** in Sequenzen hoch (D-K-A) oder niedrig (A-2-3), aber nicht „herum" (K-A-2).
 - **Joker** sind beliebig einsetzbar, auch mehrere in einer Kombination. Joker können nicht aus Auslagen zurückgetauscht werden.
-- Pro Runde wird **genau die Vorgabe** ausgelegt, keine weiteren Kombinationen.
-- **Anlegen:** erst nach dem eigenen Auslegen, dann an alle Kombinationen auf dem Tisch, auch im selben Zug.
+- Beim **ersten Auslegen genau die Vorgabe** (z. B. Runde 1: genau Gruppe aus 3 + Sequenz aus 4). Nur wo „mind.“ steht (Runde 3, 7, 8), dürfen Kombinationen länger sein.
+- **Im selben Zug** danach nur bei Gegenspielern anlegen, an die eigenen Kombinationen erst ab dem nächsten Zug.
+- **Anlegen:** erst nach dem eigenen Auslegen; an Gegenspieler sofort, an die eigenen Kombinationen ab dem nächsten Zug.
 - **Ausmachen:** wer keine Karten mehr hat – durch Abwerfen der letzten Karte oder durch Anlegen.
 - **Aus der Hand (Runde 7/8):** alles in einem Zug auslegen, höchstens eine Karte bleibt zum Abwerfen.
 - **Klopfen dürfen** nur Spieler, die noch nicht ausgelegt haben, nicht der, der die Karte gerade abgeworfen hat, und nur solange noch genug Karten im Stapel sind.
