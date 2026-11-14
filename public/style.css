@@ -627,3 +627,65 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   .topbar .pchip .tags { top: -10px; }
   .topbar .pchip .tag { font-size: .56rem; padding: 0 5px; }
 }
+
+/* ===================== Kopfzeile: nie breiter als das Fenster ===================== */
+.topbar { overflow: hidden; max-width: 100vw; }
+.topbar .players { min-width: 0; }
+.topbar > .btn { flex: none; }
+.exitbtn { --bg: #ff5a5f; --bg2: #b3141c; --edge: #6e0b10; font-size: 1.1rem; }
+
+/* ===================== Kartenrückseite im Logo-Stil ===================== */
+.back {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255,230,109,.55) 0 12%, transparent 46%),
+    repeating-conic-gradient(from 0deg at 50% 46%, #ffb21f 0 8deg, #1f5fe8 8deg 20deg),
+    #1746c4;
+  border: calc(var(--cw) * .045 + 1px) solid #fff;
+  outline: 2px solid #0a2378; outline-offset: 0;
+}
+.back::before { /* innerer gelber Rahmen + Sterne */
+  content: ''; position: absolute; inset: 5%; border-radius: calc(var(--cw) * .1);
+  border: 2px solid rgba(255,230,109,.9);
+  background:
+    radial-gradient(circle at 18% 14%, #fff 0 2px, transparent 3px),
+    radial-gradient(circle at 84% 22%, #ffe66d 0 2.5px, transparent 3.5px),
+    radial-gradient(circle at 14% 86%, #ffe66d 0 2px, transparent 3px),
+    radial-gradient(circle at 86% 84%, #fff 0 2px, transparent 3px),
+    radial-gradient(ellipse at 50% 46%, rgba(10,35,120,.0) 40%, rgba(10,35,120,.45) 100%);
+  color: transparent; font-size: 0; text-shadow: none;
+}
+.back img {
+  position: absolute; left: 50%; top: 44%; width: 104%; max-width: none; height: auto;
+  transform: translate(-50%, -50%) rotate(-10deg);
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.45));
+}
+.back span {
+  position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); margin: 0;
+  background: #0a2378; color: #fff; border: 2px solid #ffe66d; border-radius: 999px;
+  padding: 0 .55em; font-size: calc(var(--cw) * .17); line-height: 1.35; text-shadow: none; z-index: 2;
+}
+
+/* ===================== Vorderseite: noch mehr Logo-Look ===================== */
+.card { box-shadow: 0 0 0 2px #0a2378, 0 5px 0 rgba(0,0,0,.22), 0 9px 16px rgba(0,0,0,.28); }
+.card .ci b { font-size: calc(var(--cw) * .38); }
+.card .ci {
+  text-shadow:
+    2px 2px 0 var(--c3), -2px 2px 0 var(--c3), 2px -2px 0 var(--c3), -2px -2px 0 var(--c3),
+    0 2px 0 var(--c3), 0 -2px 0 var(--c3), 2px 0 0 var(--c3), -2px 0 0 var(--c3),
+    0 calc(var(--cw) * .04 + 2px) 0 var(--c3);
+}
+.card:not(.joker):not(.empty) {
+  background:
+    radial-gradient(circle at 82% 12%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 12% 70%, rgba(255,255,255,.9) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 88% 64%, rgba(255,255,255,.8) 0 1px, transparent 2px),
+    radial-gradient(120% 60% at 0% 0%, rgba(255,255,255,.38), transparent 55%),
+    linear-gradient(155deg, var(--c1), var(--c2));
+}
+.card::after { border-top-width: calc(var(--cw) * .045); border-top-color: rgba(255,255,255,.7); }
+.meld .card .ci, .staged .card .ci, .spcards .card .ci, .res .card .ci {
+  text-shadow: 1px 1px 0 var(--c3), -1px 1px 0 var(--c3), 1px -1px 0 var(--c3), -1px -1px 0 var(--c3);
+}
+.meld .card .ci b, .spcards .card .ci b { font-size: calc(var(--cw) * .34); }
+.meld .card, .staged .card, .spcards .card, .res .card { box-shadow: 0 0 0 1px #0a2378, -1px 0 3px rgba(0,0,0,.25); }

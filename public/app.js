@@ -416,13 +416,13 @@
     const myResp = v.knock.responses[me];
     let knockBtn = '';
     if (v.phase === 'draw' && !myTurn && v.knock.canKnock && v.discardTop) {
-      knockBtn = myResp === 'knock' ? '<span class="badge gold">geklopft 👊</span>'
+      knockBtn = myResp === 'knock' ? `<span class="badge gold">${v.knock.first === me ? 'du warst zuerst 👊' : 'geklopft 👊'}</span>`
         : myResp === 'pass' ? '' : `<button class="btn knock small" data-a="knock">👊 Klopfen</button>`;
     }
     const piles = `
       <div class="piles">
         <div class="pile ${canDraw ? 'clickable' : ''}" data-a="${canDraw ? 'drawStock' : ''}">
-          <div class="back"><span>${v.stockCount}</span></div>
+          <div class="back"><img src="${LOGO}" alt=""><span>${v.stockCount}</span></div>
           <div class="lbl">Stapel</div>
         </div>
         <div class="pile ${canDraw && v.discardTop ? 'clickable' : ''} ${canDiscardTap ? 'clickable' : ''}" data-drop="discard" data-a="${canDraw ? 'takeDiscard' : canDiscardTap ? 'discardSel' : ''}">
@@ -501,6 +501,7 @@
         <button class="btn icon ghost" data-a="scores" aria-label="Punkte">🏆</button>
         <button class="btn icon ghost only-wide" data-a="rules" aria-label="Regeln">?</button>
         <button class="btn icon ghost" data-a="menu" aria-label="Menü">☰</button>
+        <button class="btn icon danger exitbtn" data-a="leaveAsk" aria-label="Spiel verlassen" title="Spiel verlassen">⏻</button>
       </div>
       <div class="main">
         <div class="handzone">
@@ -581,7 +582,7 @@
         <li><b>Abwerfen:</b> eine Karte auf die Ablage – dann ist der Nächste (im Uhrzeigersinn) dran.</li>
       </ol>
       <h3>Klopfen 👊</h3>
-      <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Der Spieler am Zug hat Vorrang: nimmt er die Karte, ist das Klopfen hinfällig. Zieht er vom Stapel, bekommt der Klopfer (der Nächste im Uhrzeigersinn) die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
+      <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Es gilt: <b>wer zuerst klopft</b>, bekommt die Karte – der Spieler am Zug hat aber immer Vorrang: nimmt er die Karte selbst, ist das Klopfen hinfällig. Zieht er vom Stapel, bekommt der erste Klopfer die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
       <h3>Bedienung</h3>
       <p>Karten <b>antippen</b> zum Auswählen. Karten <b>ziehen</b>, um sie in deine Wunsch-Reihenfolge zu bringen („Farbe“ oder „Wert“ sortiert automatisch). Eine Karte auf die Ablage ziehen wirft sie ab, auf eine Kombination ziehen legt sie an.</p>
       <p><b>Sammelstapel:</b> Zieh Karten auf das ＋ (oder wähle sie aus und tippe „＋ Sammelstapel“), um z. B. einen Drilling oder eine Straße mit Joker zu sammeln. Ein grüner Haken zeigt, dass der Stapel gültig ist. Erfüllen deine Stapel die Vorgabe der Runde, erscheint „Auslegen“.</p>
@@ -625,7 +626,7 @@
     const btn = over
       ? (isHost ? `<button class="btn primary" data-a="again">Neues Spiel</button>` : '<p class="hint">Der Gastgeber kann ein neues Spiel starten.</p>')
       : (isHost ? `<button class="btn primary" data-a="nextRound">Weiter zu Runde ${lr.round + 2}</button>` : '<p class="hint">Warte auf den Gastgeber…</p>');
-    openModal(`${head}<h3>Punktestand</h3>${scoresHTML(v)}<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn ghost" data-close>Tisch ansehen</button>${btn}</div>`, onModalClick);
+    openModal(`${head}<h3>Punktestand</h3>${scoresHTML(v)}<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn danger" data-a="leaveAsk">Spiel verlassen</button><span style="flex:1"></span><button class="btn ghost" data-close>Tisch ansehen</button>${btn}</div>`, onModalClick);
     ui.modalKind = 'roundEnd';
   }
   function onModalClick(e) {
@@ -786,6 +787,10 @@
       case 'kick': return ui.ctl.send({ t: 'kick', seat: +el.dataset.seat });
       case 'start': return ui.ctl.send({ t: 'start' });
       case 'leave': return leaveGame();
+      case 'leaveAsk':
+        if (ui.view && ui.view.phase === 'gameEnd') return leaveGame();
+        return openModal(`<h2>Spiel verlassen?</h2><p>${ui.ctl && ui.ctl.mode === 'online' ? 'Ein Bot spielt für dich weiter. Mit demselben Namen kannst du später wieder einsteigen.' : 'Das laufende Spiel gegen die Bots wird beendet.'}</p>
+          <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn ghost" data-close>Weiterspielen</button><button class="btn danger" data-a="leave">Ja, verlassen</button></div>`, onModalClick);
       case 'rules': return openModal(rulesHTML());
       case 'scores': return v && openModal(`<button class="btn small ghost close" data-close>Schließen</button><h2>Punkte</h2><p class="hint">Wenigste Punkte gewinnen.</p>${scoresHTML(v)}`);
       case 'menu':

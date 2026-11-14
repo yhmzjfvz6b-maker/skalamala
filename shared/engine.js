@@ -178,7 +178,7 @@
     s.melds = [];
     s.current = (s.dealer + 1) % n;
     s.phase = 'draw';
-    s.knock = { responses: {}, deadline: 0 };
+    s.knock = { responses: {}, deadline: 0, order: [] };
     s.lastRound = null;
     log(s, `Runde ${s.round + 1}: ${ROUNDS[s.round].title} – ${s.players[s.dealer].name} gibt, ${s.players[s.current].name} beginnt.`);
     s.seq++;
@@ -218,21 +218,19 @@
   function knockPending(s) {
     return knockEligible(s).filter((i) => s.knock.responses[i] === undefined);
   }
-  // Klopfen kann aufgelöst werden, wenn niemand mit höherer Priorität noch antworten kann
-  function knockDecided(s) {
+  // Wer zuerst klopft, bekommt die Karte (der Spieler am Zug hat aber immer Vorrang).
+  // Entschieden ist es, sobald jemand geklopft hat oder alle gepasst haben.
+  function firstKnocker(s) {
     const elig = new Set(knockEligible(s));
-    for (const i of knockOrder(s)) {
-      if (!elig.has(i)) continue;
-      const r = s.knock.responses[i];
-      if (r === 'knock') return true;
-      if (r === undefined) return false;
-    }
-    return true;
+    return (s.knock.order || []).find((i) => elig.has(i));
+  }
+  function knockDecided(s) {
+    if (firstKnocker(s) !== undefined) return true;
+    return knockPending(s).length === 0;
   }
 
   function resolveKnock(s) {
-    const elig = new Set(knockEligible(s));
-    const winner = knockOrder(s).find((i) => elig.has(i) && s.knock.responses[i] === 'knock');
+    const winner = firstKnocker(s);
     if (winner !== undefined) {
       const p = s.players[winner];
       const c = s.discard.pop();
@@ -242,7 +240,7 @@
       log(s, `👊 ${p.name} klopft und nimmt ${cardLabel(c)} + 1 verdeckte Karte.`);
     }
     const c = drawFromStock(s);
-    s.knock = { responses: {}, deadline: 0 };
+    s.knock = { responses: {}, deadline: 0, order: [] };
     if (!c) return endRound(s, null);
     s.players[s.current].hand.push(c);
     s.phase = 'play';
@@ -266,7 +264,7 @@
   function nextTurn(s) {
     s.current = (s.current + 1) % s.players.length;
     s.phase = 'draw';
-    s.knock = { responses: {}, deadline: 0 };
+    s.knock = { responses: {}, deadline: 0, order: [] };
     s.lastDrawn = null;
     s.lastTaken = null;
   }
@@ -311,7 +309,11 @@
       if (a.type === 'pass' && (s.phase !== 'draw' && s.phase !== 'knock')) return 'Nichts zu passen';
       if (s.knock.responses[seat] !== undefined) return 'Du hast schon entschieden';
       s.knock.responses[seat] = a.type;
-      if (a.type === 'knock') log(s, `👊 ${p.name} klopft!`);
+      if (a.type === 'knock') {
+        s.knock.order = s.knock.order || [];
+        s.knock.order.push(seat);
+        log(s, s.knock.order.length === 1 ? `👊 ${p.name} klopft als Erste(r)!` : `👊 ${p.name} klopft – zu spät.`);
+      }
       if (s.phase === 'knock' && knockDecided(s)) resolveKnock(s);
       return null;
     }
@@ -326,7 +328,7 @@
         s.lastDrawn = c.id;
         s.lastTaken = c.id;
         s.taken[c.id] = (s.taken[c.id] || 0) + 1;
-        s.knock = { responses: {}, deadline: 0 };
+        s.knock = { responses: {}, deadline: 0, order: [] };
         s.phase = 'play';
         log(s, `${p.name} nimmt ${cardLabel(c)} von der Ablage.`);
         return null;
@@ -435,6 +437,7 @@
       lastDrawn: seat === s.current ? s.lastDrawn : null,
       knock: {
         responses: Object.assign({}, s.knock.responses),
+        first: firstKnocker(s),
         deadline: s.knock.deadline,
         canKnock: canKnock(s, seat),
         pending: s.phase === 'knock' ? knockPending(s) : [],
@@ -681,15 +684,14 @@
       if (s.phase === 'knock') {
         const pend = knockPending(s);
         const autos = pend.filter((i) => this.isAuto(i));
-        if (autos.length) {
-          this._later(350, () => {
-            if (s.seq !== seq) return;
-            for (const i of autos) {
-              const a = botAction(s, i) || { type: 'pass' };
-              if (s.phase !== 'knock') break;
-              act(s, i, a);
-            }
-            this.opts.onChange(); this._tick();
+        const left = Math.max(200, s.knock.deadline - Date.now() - 400);
+        for (const i of autos) {
+          // Bots überlegen kurz – so haben Menschen eine faire Chance, zuerst zu klopfen
+          const a = botAction(s, i) || { type: 'pass' };
+          const d = a.type === 'knock' ? 900 + Math.random() * 1800 : 300 + Math.random() * 600;
+          this._later(Math.min(d, left), () => {
+            if (s.phase !== 'knock' || s.knock.responses[i] !== undefined) return;
+            if (!act(s, i, a)) { this.opts.onChange(); this._tick(); }
           });
         }
         const ms = Math.max(0, s.knock.deadline - Date.now());
