@@ -497,11 +497,11 @@
           <span class="roundchip">${v.round + 1}/8</span>
           <div class="txt"><div class="ttl">${esc(R.title)}</div><div class="det ${warn ? 'warn' : ''}">${esc(R.detail)}</div></div>
         </div>
+        <div class="players">${players}</div>
         <button class="btn icon ghost" data-a="scores" aria-label="Punkte">🏆</button>
         <button class="btn icon ghost only-wide" data-a="rules" aria-label="Regeln">?</button>
         <button class="btn icon ghost" data-a="menu" aria-label="Menü">☰</button>
       </div>
-      <div class="players">${players}</div>
       <div class="main">
         <div class="handzone">
           <div class="handbar">
@@ -514,15 +514,15 @@
           </div>
           ${pileRow}
           <div class="hand" id="hand">${handHTML}</div>
-        </div>
-        <div class="side">
-          <div class="tablezone">${meldArea}</div>
           <div class="dock">
             <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
             <div class="lastlog">${esc(lastLog)}</div>
             ${staging}
             <div class="actions">${actions.join('')}</div>
           </div>
+        </div>
+        <div class="side">
+          <div class="tablezone">${meldArea}</div>
           <div class="pilebar">${piles}${slots}</div>
         </div>
       </div>
