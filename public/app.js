@@ -68,6 +68,48 @@
     return cards.slice().sort((a, b) => key(a) - key(b));
   }
 
+  // ---------- Sammelstapel ----------
+  function movePileCards(ids, target) {
+    ui.piles = ui.piles.map((p) => p.filter((id) => !ids.includes(id)));
+    if (target === 'new') ui.piles.push(ids.slice());
+    else if (target != null && ui.piles[target]) ui.piles[target] = ui.piles[target].concat(ids);
+    // leere Stapel entfernen – Indizes vorher merken ist nicht nötig, da Ziel schon befüllt ist
+    ui.piles = ui.piles.filter((p) => p.length);
+  }
+  function pileStatus(cards, R) {
+    const n = cards.length;
+    if (n === 1) return { cls: 'part', label: 'Stapel (1)' };
+    for (const sl of R.slots) if (E.validMeld(cards, sl.t, sl.min)) return { cls: 'ok', label: `✓ ${E.TYPE_NAME[sl.t]}` };
+    const types = [...new Set(R.slots.map((x) => x.t))];
+    for (const t of types) {
+      if (E.validMeld(cards, t)) {
+        const min = Math.min(...R.slots.filter((x) => x.t === t).map((x) => x.min));
+        return { cls: 'part', label: `${E.TYPE_NAME[t]} – noch ${min - n}` };
+      }
+    }
+    // gültig, aber nicht gesucht (z. B. Sequenz in einer Gruppen-Runde): nur zum Sammeln
+    if (E.validMeld(cards, 'G') || E.validMeld(cards, 'S')) return { cls: 'part', label: `Stapel (${n})` };
+    return { cls: 'bad', label: n === 1 ? 'Stapel (1)' : 'passt nicht' };
+  }
+  // Welche Sammelstapel ergeben zusammen die Vorgabe der Runde?
+  function contractFromPiles(v) {
+    const R = v.roundInfo, k = R.slots.length;
+    const byId = new Map(v.hand.map((c) => [c.id, c]));
+    const piles = ui.piles.map((p) => p.map((id) => byId.get(id)).filter(Boolean));
+    const idx = piles.map((_, i) => i);
+    let found = null;
+    (function choose(start, acc) {
+      if (found) return;
+      if (acc.length === k) {
+        if (E.matchContract(acc.map((i) => piles[i]), R.slots)) found = acc.slice();
+        return;
+      }
+      for (let i = start; i < idx.length; i++) { acc.push(i); choose(i + 1, acc); acc.pop(); }
+    })(0, []);
+    if (!found) return null;
+    return { used: found, melds: found.map((i) => piles[i].map((c) => c.id)) };
+  }
+
   // Passen die (vorgemerkten) Kombinationen auf verschiedene Vorgaben?
   function partialMatch(melds, slots) {
     if (melds.length > slots.length) return false;
@@ -97,8 +139,8 @@
     view: null,
     room: null,
     selected: [],
-    staged: [],
-    stageKey: '',
+    piles: [],      // Sammelstapel: Arrays von Karten-IDs
+    pilesRound: -1,
     knockStart: 0, knockSeq: -1,
     lastTurnKey: '',
     modalKind: null,
@@ -191,8 +233,8 @@
     const ids = new Set(v.hand.map((c) => c.id));
     ui.selected = ui.selected.filter((id) => ids.has(id));
     const key = `${v.round}|${v.current}|${v.phase === 'play' ? 'p' : 'x'}`;
-    if (key !== ui.stageKey) { ui.staged = []; ui.stageKey = key; }
-    ui.staged = ui.staged.filter((m) => m.every((id) => ids.has(id)));
+    if (ui.pilesRound !== v.round) { ui.piles = []; ui.pilesRound = v.round; }
+    ui.piles = ui.piles.map((p) => p.filter((id) => ids.has(id))).filter((p) => p.length);
     // Mein Zug?
     const turnKey = `${v.round}|${v.current}|${v.seq}`;
     if (v.current === v.seat && v.phase === 'draw' && (!prev || prev.current !== v.seat || prev.phase !== 'draw')) { vibrate(60); }
@@ -328,7 +370,8 @@
     const myTurn = v.current === me;
     const myP = v.players[me];
     const canPlay = myTurn && v.phase === 'play';
-    const stagedIds = new Set([].concat(...ui.staged));
+    const stagedIds = new Set([].concat(...ui.piles));
+    const contract = !myP.down ? contractFromPiles(v) : null;
     const handById = new Map(v.hand.map((c) => [c.id, c]));
 
     // Spieler-Leiste
@@ -394,14 +437,26 @@
     }
     if (canPlay) {
       if (!myP.down) {
-        const freeSel = ui.selected.filter((id) => !stagedIds.has(id));
-        if (ui.staged.length < R.slots.length) actions.push(`<button class="btn green" data-a="stage" ${freeSel.length >= 2 ? '' : 'disabled'}>＋ Kombination${freeSel.length ? ` (${freeSel.length})` : ''}</button>`);
-        if (ui.staged.length === R.slots.length) actions.push(`<button class="btn primary" data-a="layDown">${R.fromHand ? '🎉 Ausmachen!' : 'Auslegen'}</button>`);
+        if (contract) actions.push(`<button class="btn primary" data-a="layDown">${R.fromHand ? '🎉 Ausmachen!' : '✓ Auslegen'}</button>`);
       }
-      actions.push(`<button class="btn ${myP.down || ui.staged.length < R.slots.length ? 'primary' : ''}" data-a="discardSel" ${ui.selected.length === 1 && !stagedIds.has(ui.selected[0]) ? '' : 'disabled'}>Abwerfen</button>`);
+      actions.push(`<button class="btn ${contract ? '' : 'primary'}" data-a="discardSel" ${ui.selected.length === 1 ? '' : 'disabled'}>Abwerfen</button>`);
     }
+    if (ui.selected.length >= 1 && v.phase !== 'roundEnd' && v.phase !== 'gameEnd') actions.unshift(`<button class="btn green" data-a="newPile">＋ Sammelstapel (${ui.selected.length})</button>`);
     if (v.phase === 'roundEnd' || v.phase === 'gameEnd') actions.push(`<button class="btn primary" data-a="showResult">${v.phase === 'gameEnd' ? 'Endergebnis' : 'Rundenergebnis'}</button>`);
-    const staging = ui.staged.length ? `<div class="staging">${ui.staged.map((m, i) => `<div class="staged">${m.map((id) => cardHTML(handById.get(id))).join('')}<button data-a="unstage" data-i="${i}" aria-label="Kombination auflösen">✕</button></div>`).join('')}</div>` : '';
+    const staging = '';
+    const pileRow = `<div class="pilerow" id="pilerow">
+      ${ui.piles.map((ids, i) => {
+        const cards = ids.map((id) => handById.get(id)).filter(Boolean);
+        const st = pileStatus(cards, R);
+        const used = contract && contract.used.includes(i);
+        return `<div class="spile ${st.cls} ${used ? 'used' : ''}" data-pile="${i}">
+          <div class="splbl" data-a="selPile" data-i="${i}">${esc(st.label)}</div>
+          <div class="spcards">${cards.map((c) => cardHTML(c, { cls: ui.selected.includes(c.id) ? 'sel' : '' })).join('')}</div>
+          <button class="spx" data-a="dissolve" data-i="${i}" aria-label="Stapel auflösen">✕</button>
+        </div>`;
+      }).join('')}
+      <div class="spile new" data-pile="new" data-a="newPile"><span>＋</span><small>${ui.piles.length ? 'Stapel' : 'Sammelstapel: Karten hierher ziehen'}</small></div>
+    </div>`;
 
     // Hand
     const hand = orderedHand(v.hand.filter((c) => !stagedIds.has(c.id)), v.round);
@@ -434,6 +489,7 @@
               ${ui.selected.length ? '<button class="btn small danger" data-a="clearSel" aria-label="Auswahl aufheben">✕</button>' : ''}
             </span>
           </div>
+          ${pileRow}
           <div class="hand" id="hand">${handHTML}</div>
         </div>
         <div class="tablezone">${meldArea}</div>
@@ -503,12 +559,14 @@
       <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Der Spieler am Zug hat Vorrang: nimmt er die Karte, ist das Klopfen hinfällig. Zieht er vom Stapel, bekommt der Klopfer (der Nächste im Uhrzeigersinn) die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
       <h3>Bedienung</h3>
       <p>Karten <b>antippen</b> zum Auswählen. Karten <b>ziehen</b>, um sie in deine Wunsch-Reihenfolge zu bringen („Farbe“ oder „Wert“ sortiert automatisch). Eine Karte auf die Ablage ziehen wirft sie ab, auf eine Kombination ziehen legt sie an.</p>
+      <p><b>Sammelstapel:</b> Zieh Karten auf das ＋ (oder wähle sie aus und tippe „＋ Sammelstapel“), um z. B. einen Drilling oder eine Straße mit Joker zu sammeln. Ein grüner Haken zeigt, dass der Stapel gültig ist. Erfüllen deine Stapel die Vorgabe der Runde, erscheint „Auslegen“.</p>
       <h3>Kombinationen</h3>
       <ul>
         <li><b>Gruppe:</b> gleiche Werte, z. B. 3 Zehnen (Farben egal).</li>
         <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3), aber nicht herum (K-A-2).</li>
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
-        <li><b>Joker</b> ersetzen jede Karte; jede Kombination braucht aber mindestens eine echte Karte.</li>
+        <li><b>Joker</b> ersetzen jede beliebige Karte – auch mehrere Joker in einer Kombination sind erlaubt.</li>
+        <li>Pro Runde wird <b>genau die Vorgabe</b> ausgelegt, keine weiteren Kombinationen. Danach darf man nur noch <b>anlegen</b> – an eigene und fremde Kombinationen.</li>
       </ul>
       <h3>Die 8 Runden</h3>
       <ol>${E.ROUNDS.map((r) => `<li><b>${esc(r.title)}</b> – ${esc(r.detail)}</li>`).join('')}</ol>
@@ -552,7 +610,7 @@
 
   // ---------- Eingaben ----------
   $app.addEventListener('click', (e) => {
-    if (e.target.closest('#hand .card')) return; // per Zeiger-Logik (Tippen/Ziehen)
+    if (e.target.closest('#hand .card, #pilerow .card')) return; // per Zeiger-Logik (Tippen/Ziehen)
     const meldEl = e.target.closest('[data-meld]');
     if (meldEl) return layOff(+meldEl.dataset.meld);
     const b = e.target.closest('[data-a]');
@@ -577,7 +635,7 @@
     return { target: best, after: x > best.r.left + best.r.width / 2 };
   }
   $app.addEventListener('pointerdown', (e) => {
-    const c = e.target.closest('#hand .card');
+    const c = e.target.closest('#hand .card, #pilerow .card');
     if (!c || (e.button != null && e.button > 0)) return;
     drag = { id: +c.dataset.id, el: c, x0: e.clientX, y0: e.clientY, moved: false, pid: e.pointerId };
     try { c.setPointerCapture(e.pointerId); } catch (err) {}
@@ -589,13 +647,14 @@
       if (Math.hypot(dx, dy) < 9) return;
       drag.moved = true; ui.dragging = true;
       drag.el.classList.add('dragging');
+      drag.fromPile = !!drag.el.closest('#pilerow');
       drag.rects = [...document.querySelectorAll('#hand .card')].filter((x) => x !== drag.el).map((x) => ({ id: +x.dataset.id, r: x.getBoundingClientRect(), el: x }));
     }
     e.preventDefault();
     drag.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.max(-8, Math.min(8, dx / 30))}deg) scale(1.06)`;
     clearDropMarks();
     const under = document.elementFromPoint(e.clientX, e.clientY);
-    const special = under && (under.closest('[data-drop="discard"]') || under.closest('[data-meld]'));
+    const special = under && (under.closest('[data-drop="discard"]') || under.closest('[data-meld]') || under.closest('[data-pile]'));
     if (special) { special.classList.add('drop-on'); return; }
     const sl = dropSlot(e.clientX, e.clientY, drag.rects);
     if (sl) sl.target.el.classList.add(sl.after ? 'drop-r' : 'drop-l');
@@ -612,6 +671,14 @@
     const canPlay = v && v.current === v.seat && v.phase === 'play';
     const onDiscard = under && under.closest('[data-drop="discard"]');
     const onMeld = under && under.closest('[data-meld]');
+    const onPile = under && under.closest('[data-pile]');
+    const moveIds = ui.selected.includes(d.id) && ui.selected.length > 1 ? ui.selected.slice() : [d.id];
+    if (onPile) {
+      const t = onPile.dataset.pile;
+      movePileCards(moveIds, t === 'new' ? 'new' : +t);
+      ui.selected = []; ui.pendingRender = false;
+      return render();
+    }
     if (onDiscard && canPlay) { ui.selected = []; ui.pendingRender = false; ui.ctl.act({ type: 'discard', cardId: d.id }); return render(); }
     if (onMeld && canPlay) {
       if (!v.players[v.seat].down) { toast('Erst die Vorgabe auslegen, dann anlegen.'); return render(); }
@@ -620,7 +687,11 @@
       ui.ctl.act({ type: 'layOff', cardIds: ids, meldId: +onMeld.dataset.meld });
       return render();
     }
-    if (!cancel && d.rects && d.rects.length) {
+    if (!cancel && d.fromPile) {
+      // aus dem Sammelstapel zurück in die Hand
+      ui.piles = ui.piles.map((p) => p.filter((id) => !moveIds.includes(id))).filter((p) => p.length);
+    }
+    if (!cancel && d.rects && d.rects.length && !d.fromPile) {
       const sl = dropSlot(e.clientX, e.clientY, d.rects);
       const order = [...document.querySelectorAll('#hand .card')].map((x) => +x.dataset.id).filter((id) => id !== d.id);
       let idx = order.indexOf(sl.target.id) + (sl.after ? 1 : 0);
@@ -714,25 +785,26 @@
         ui.selected = [];
         return ui.ctl.act({ type: 'discard', cardId: id });
       }
-      case 'stage': {
-        const staged = new Set([].concat(...ui.staged));
-        const ids = ui.selected.filter((id) => !staged.has(id));
-        const byId = new Map(v.hand.map((c) => [c.id, c]));
-        const melds = ui.staged.map((m) => m.map((id) => byId.get(id))).concat([ids.map((id) => byId.get(id))]);
-        if (!partialMatch(melds, v.roundInfo.slots)) {
-          return toast(`Das passt nicht. Gesucht: ${v.roundInfo.slots.map(E.slotLabel).join(' + ')}`, 3200);
-        }
-        ui.staged.push(ids);
+      case 'newPile': {
+        const ids = ui.selected.slice();
+        if (!ids.length) return toast('Karten antippen und dann „＋ Sammelstapel“ – oder Karten auf das ＋ ziehen.');
+        movePileCards(ids, 'new');
         ui.selected = [];
         return render();
       }
-      case 'unstage': ui.staged.splice(+el.dataset.i, 1); return render();
-      case 'layDown': {
-        const melds = ui.staged.map((m) => m.slice());
-        ui.staged = []; ui.selected = [];
-        return ui.ctl.act({ type: 'layDown', melds });
+      case 'selPile': {
+        const p = ui.piles[+el.dataset.i] || [];
+        const all = p.every((id) => ui.selected.includes(id));
+        ui.selected = all ? ui.selected.filter((id) => !p.includes(id)) : [...new Set(ui.selected.concat(p))];
+        return render();
       }
-      case 'showResult': return showRoundEnd();
+      case 'dissolve': ui.piles.splice(+el.dataset.i, 1); return render();
+      case 'layDown': {
+        const c = contractFromPiles(v);
+        if (!c) return toast(`Deine Sammelstapel erfüllen die Vorgabe noch nicht: ${v.roundInfo.slots.map(E.slotLabel).join(' + ')}`, 3200);
+        ui.selected = [];
+        return ui.ctl.act({ type: 'layDown', melds: c.melds });
+      }
       case 'nextRound': closeModal(); return ui.ctl.act({ type: 'nextRound' });
       case 'again': closeModal(); return ui.ctl.again();
     }
@@ -743,7 +815,7 @@
     closeModal();
     if (ui.ctl) ui.ctl.leave();
     if (ui.ctl && ui.ctl.mode === 'online') store.del('session');
-    ui.ctl = null; ui.view = null; ui.room = null; ui.selected = []; ui.staged = [];
+    ui.ctl = null; ui.view = null; ui.room = null; ui.selected = []; ui.piles = [];
     go('home');
   }
   function confirmLeave() { return true; }

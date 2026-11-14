@@ -62,7 +62,8 @@
   function arrangeRun(cards, alt) {
     const jokers = cards.filter((c) => c.joker);
     const nat = cards.filter((c) => !c.joker);
-    if (!nat.length) return null;
+    // Joker sind beliebig einsetzbar – auch eine Sequenz nur aus Jokern ist erlaubt
+    if (!nat.length) return cards.length <= 14 ? cards.map((c) => ({ card: c, rank: 0 })) : null;
     if (!alt && nat.some((c) => c.suit !== nat[0].suit)) return null;
     const aces = nat.filter((c) => c.rank === 14);
     if (aces.length > 2) return null;
@@ -110,8 +111,9 @@
     if (cards.length < Math.max(min, 1)) return null;
     if (t === 'G') {
       const nat = cards.filter((c) => !c.joker);
-      if (!nat.length || nat.some((c) => c.rank !== nat[0].rank)) return null;
-      return nat.concat(cards.filter((c) => c.joker)).map((c) => ({ card: c, rank: nat[0].rank }));
+      if (nat.some((c) => c.rank !== nat[0].rank)) return null;
+      const r = nat.length ? nat[0].rank : 0; // nur Joker: Wert noch offen
+      return nat.concat(cards.filter((c) => c.joker)).map((c) => ({ card: c, rank: r }));
     }
     if (t === 'S' || t === 'A') return arrangeRun(cards, t === 'A');
     return null;
@@ -352,6 +354,7 @@
     if (a.type === 'layDown') {
       if (p.down) return 'Du hast schon ausgelegt';
       if (!Array.isArray(a.melds)) return 'Ungültig';
+      if (a.melds.length !== R.slots.length) return `In dieser Runde werden genau ${R.slots.length} Kombination${R.slots.length === 1 ? '' : 'en'} ausgelegt: ${R.slots.map(slotLabel).join(' + ')}. Weitere Karten danach anlegen.`;
       const all = [].concat(...a.melds);
       const cards = takeFromHand(p, all);
       if (!cards) return 'Karten nicht auf der Hand';

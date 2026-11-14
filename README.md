@@ -22,6 +22,7 @@ Dann im Browser öffnen: **http://localhost:3000**
 - **Karten antippen** = auswählen (für Kombinationen, Anlegen oder Abwerfen).
 - **Karten ziehen** = eigene Reihenfolge festlegen. Mit „Farbe" oder „Wert" wird wieder automatisch sortiert.
 - Eine Karte auf die **Ablage ziehen** = abwerfen, auf eine **Kombination ziehen** = anlegen.
+- **Sammelstapel:** Karten auf das ＋ ziehen (oder auswählen und „＋ Sammelstapel“ tippen), z. B. für einen Drilling oder eine Straße mit Joker. Grüner Haken = gültig. Ergeben die Stapel die Vorgabe der Runde, erscheint „Auslegen“.
 
 ## Mit Freunden übers Internet spielen
 
@@ -64,7 +65,8 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 
 - **Die 9 zählt 5 Punkte** (Funktion `cardPoints`).
 - **Ass** in Sequenzen hoch (D-K-A) oder niedrig (A-2-3), aber nicht „herum" (K-A-2).
-- **Joker** dürfen überall eingesetzt werden, jede Kombination braucht aber mindestens eine echte Karte. Joker können nicht aus Auslagen zurückgetauscht werden.
+- **Joker** sind beliebig einsetzbar, auch mehrere in einer Kombination. Joker können nicht aus Auslagen zurückgetauscht werden.
+- Pro Runde wird **genau die Vorgabe** ausgelegt, keine weiteren Kombinationen.
 - **Anlegen:** erst nach dem eigenen Auslegen, dann an alle Kombinationen auf dem Tisch, auch im selben Zug.
 - **Ausmachen:** wer keine Karten mehr hat – durch Abwerfen der letzten Karte oder durch Anlegen.
 - **Aus der Hand (Runde 7/8):** alles in einem Zug auslegen, höchstens eine Karte bleibt zum Abwerfen.

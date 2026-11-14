@@ -492,3 +492,40 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   }
   .pilebar .slots { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------- Sammelstapel ---------- */
+.pilerow {
+  --sw: clamp(40px, 10.5vw, 60px);
+  display: flex; gap: 8px; overflow-x: auto; padding: 18px 2px 6px; flex: none; scrollbar-width: thin;
+  border-bottom: 2px dashed rgba(255,255,255,.18);
+}
+.spile {
+  position: relative; flex: none; display: flex; flex-direction: column; gap: 4px;
+  padding: 6px 8px 8px; border-radius: 14px; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.25);
+  min-width: calc(var(--sw) + 20px);
+}
+.spile.ok { border-color: var(--green); background: rgba(43,178,76,.22); }
+.spile.part { border-color: var(--yellow); background: rgba(255,210,63,.12); }
+.spile.bad { border-color: #ff6b6b; background: rgba(229,38,47,.16); }
+.spile.used { box-shadow: 0 0 0 3px rgba(43,178,76,.45), 0 0 16px rgba(43,178,76,.5); }
+.splbl { font-size: .72rem; font-weight: 900; white-space: nowrap; cursor: pointer; padding-right: 18px; }
+.spile.ok .splbl { color: #b7f5c6; }
+.spile.part .splbl { color: var(--yellow-2); }
+.spile.bad .splbl { color: #ffc2c2; }
+.spcards { display: flex; }
+.spcards .card { --cw: var(--sw); margin-right: calc(var(--sw) * -.55); touch-action: none; cursor: grab; transition: transform .12s; }
+.spcards .card:last-child { margin-right: 0; }
+.spcards .card .ci.br { display: none; }
+.spcards .card .cs { font-size: calc(var(--cw) * .48); padding: 30% 0 0 28%; }
+.spcards .card.sel { transform: translateY(-10px); box-shadow: 0 0 0 3px var(--yellow), 0 0 0 6px var(--red); }
+.spcards .card.joker .jk { display: none; }
+.spcards .card.dragging { z-index: 20; pointer-events: none; transition: none; }
+.spx { position: absolute; top: -9px; right: -7px; width: 24px; height: 24px; border-radius: 50%; background: var(--red); border: 2px solid #fff; color: #fff; font-size: .7rem; font-weight: 900; }
+.spile.new {
+  align-items: center; justify-content: center; cursor: pointer; border-style: dashed; color: var(--muted);
+  min-height: calc(var(--sw) * 1.42 + 30px); min-width: calc(var(--sw) * 1.2);
+}
+.spile.new span { font-family: var(--display); font-size: 1.6rem; color: var(--yellow); line-height: 1; }
+.spile.new small { font-size: .66rem; font-weight: 800; text-align: center; max-width: 9em; line-height: 1.2; }
+.spile.drop-on, .spile.new.drop-on { outline: 4px solid var(--yellow); outline-offset: 2px; }
+@media (min-width: 900px) { .pilerow { --sw: 58px; } }
