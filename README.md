@@ -102,3 +102,9 @@ Eigene Hintergrundmusik (Schunkelwalzer, selbst komponiert – keine GEMA) und G
 ## Kartenfarben
 
 Nur zwei Farben: Herz und Karo rot, Pik und Kreuz blau (= „schwarz“). In Runde 5 (Skalamala) sortiert der Knopf „Rot/Schwarz“ die Hand so, dass rot und schwarz von selbst abwechseln.
+
+## Besucher-Protokoll
+
+Der Server protokolliert Seitenaufrufe, Anmeldungen (Name, Raum) und Spielstarts – ohne IP-Adressen – in `data/besuche.log`.
+Ansehen unter `/admin?key=DEIN-SCHLÜSSEL`. Dafür beim Server die Umgebungsvariable `ADMIN_KEY` setzen (ohne sie ist die Seite gesperrt).
+Optional `DATA_DIR` für einen dauerhaften Speicherort (bei Render z. B. eine „Disk“), sonst geht das Protokoll bei jedem Neustart verloren.

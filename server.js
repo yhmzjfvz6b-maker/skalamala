@@ -18,11 +18,61 @@ const RECONNECT_GRACE_MS = 20000; // so lange wird auf einen getrennten Spieler 
 
 // ---------------- Statische Dateien ----------------
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.webmanifest': 'application/manifest+json' };
+// ---------------- Besucher-Protokoll ----------------
+// Gespeichert werden nur Zeit, Ereignis, Spielername, Raum und Gerätetyp – keine IP-Adressen.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const LOG_FILE = path.join(DATA_DIR, 'besuche.log');
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const LOG_MAX = 3000;
+let visitLog = [];
+try { visitLog = fs.readFileSync(LOG_FILE, 'utf8').trim().split('\n').filter(Boolean).slice(-LOG_MAX).map((l) => JSON.parse(l)); } catch (e) { visitLog = []; }
+function device(ua) {
+  ua = String(ua || '');
+  const d = /iPad|Tablet/i.test(ua) ? 'Tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'Handy' : 'PC';
+  const b = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  return b ? `${d} · ${b}` : d;
+}
+function logEvent(type, info) {
+  const e = Object.assign({ t: new Date().toISOString(), type }, info || {});
+  visitLog.push(e);
+  if (visitLog.length > LOG_MAX) visitLog = visitLog.slice(-LOG_MAX);
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.appendFileSync(LOG_FILE, JSON.stringify(e) + '\n'); } catch (err) {}
+}
+const escH = (x) => String(x == null ? '' : x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function adminPage() {
+  const fmt = (iso) => new Date(iso).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
+  const today = new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
+  const isToday = (e) => new Date(e.t).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' }) === today;
+  const visitsToday = visitLog.filter((e) => e.type === 'Besuch' && isToday(e)).length;
+  const namesToday = [...new Set(visitLog.filter((e) => e.name && isToday(e)).map((e) => e.name))];
+  const lastSeen = {};
+  for (const e of visitLog) if (e.name) lastSeen[e.name] = e.t;
+  const rows = visitLog.slice().reverse().slice(0, 500).map((e) => `<tr><td>${escH(fmt(e.t))}</td><td>${escH(e.type)}</td><td>${escH(e.name || '')}</td><td>${escH(e.room || '')}</td><td>${escH(e.info || e.dev || '')}</td></tr>`).join('');
+  const seen = Object.entries(lastSeen).sort((a, b) => b[1].localeCompare(a[1])).map(([n, t]) => `<li><b>${escH(n)}</b> – zuletzt ${escH(fmt(t))}</li>`).join('');
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skalamala – Besucher</title>
+<style>body{font-family:system-ui,sans-serif;background:#0a1e66;color:#fff;margin:0;padding:16px}h1{margin:0 0 8px;color:#ffd23f}
+.k{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.k div{background:#1b3f9a;border-radius:12px;padding:10px 14px}.k b{font-size:1.5rem;display:block;color:#ffd23f}
+table{border-collapse:collapse;width:100%;background:#fff;color:#111;border-radius:10px;overflow:hidden;font-size:.9rem}td,th{padding:6px 8px;border-bottom:1px solid #ddd;text-align:left}th{background:#ffd23f}
+ul{columns:2;padding-left:18px}a{color:#ffd23f}</style></head><body>
+<h1>Skalamala – Besucher-Protokoll</h1>
+<div class="k"><div><b>${visitsToday}</b>Seitenaufrufe heute</div><div><b>${namesToday.length}</b>Spieler heute</div><div><b>${Object.keys(lastSeen).length}</b>Spieler insgesamt</div><div><b>${rooms.size}</b>Räume gerade offen</div></div>
+<h2>Spieler – zuletzt gesehen</h2><ul>${seen || '<li>noch niemand</li>'}</ul>
+<h2>Letzte Ereignisse</h2>
+<table><tr><th>Zeit</th><th>Ereignis</th><th>Name</th><th>Raum</th><th>Info</th></tr>${rows || '<tr><td colspan=5>noch keine Einträge</td></tr>'}</table>
+<p style="opacity:.7;font-size:.8rem">Gespeichert werden nur Zeit, Ereignis, Name, Raum und Gerätetyp – keine IP-Adressen.</p></body></html>`;
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
+  if (url.pathname === '/admin') {
+    if (!ADMIN_KEY || url.searchParams.get('key') !== ADMIN_KEY) { res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end(ADMIN_KEY ? 'Falscher Schlüssel.' : 'Admin-Seite ist aus: Umgebungsvariable ADMIN_KEY setzen.'); }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(adminPage());
+  }
+  if (url.pathname === '/' || url.pathname === '/index.html') logEvent('Besuch', { dev: device(req.headers['user-agent']) });
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, version: '1.52', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
+    return res.end(JSON.stringify({ ok: true, version: '1.53', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');
@@ -97,7 +147,9 @@ server.on('upgrade', (req, socket) => {
   if (!req.url.startsWith('/ws') || !key) return socket.destroy();
   const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
   socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
-  onConnection(new WS(socket));
+  const w = new WS(socket);
+  w.dev = device(req.headers['user-agent']);
+  onConnection(w);
 });
 
 // ---------------- Räume ----------------
@@ -163,6 +215,7 @@ function pickHost(room) {
   if (h) room.host = h;
 }
 function startGame(room) {
+  logEvent('Spielstart', { room: room.title ? `${room.title} (${room.code})` : room.code, info: room.seats.map((s) => s.name).join(', ') });
   if (room.game) room.game.destroy();
   room.ready = new Set();
   room.game = new E.GameHost(room.seats.map((s) => ({ name: s.name, bot: s.bot })), {
@@ -196,6 +249,7 @@ function onConnection(ws) {
   const seatIdx = () => (room ? room.seats.indexOf(me) : -1);
 
   function attach(r, st) {
+    logEvent(me === st || (st.ws && st.ws !== ws) || st.leftAt ? 'wieder verbunden' : 'Anmeldung', { name: st.name, room: r.title ? `${r.title} (${r.code})` : r.code, dev: ws.dev });
     room = r; me = st;
     if (st.ws && st.ws !== ws) { st.ws.send({ t: 'error', msg: 'Du hast dich auf einem anderen Gerät angemeldet.' }); st.ws.close(); }
     st.ws = ws; st.leftAt = 0;
