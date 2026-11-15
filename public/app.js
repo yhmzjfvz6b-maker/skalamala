@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.48 · 15.11.2026';
+  const VERSION = '1.49 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -38,11 +38,24 @@
   }
   function closeModal() { $modal.classList.add('hidden'); $modal.innerHTML = ''; ui.modalKind = null; }
 
+  // Welche Farbe stellt ein Joker in einer Kombination dar?
+  function jokerLook(m, k) {
+    const ref = m.cards.map((c, i) => ({ c, p: m.ranks[i] })).find((o) => !o.c.joker);
+    if (!ref || m.t === 'G') return {};
+    if (m.t === 'S') return { repSuit: ref.c.suit, repColor: E.isRed(ref.c) ? 'red' : 'black' };
+    const red = E.isRed(ref.c) === (Math.abs(m.ranks[k] - ref.p) % 2 === 0);
+    return { repColor: red ? 'red' : 'black' };
+  }
   function cardHTML(c, opts) {
     opts = opts || {};
     const cls = opts.cls || '';
     if (!c) return `<div class="card empty ${cls}"></div>`;
     const data = `data-id="${c.id}"`;
+    if (c.joker && opts.rep && opts.repColor) {
+      // Joker in einer Sequenz: in der Farbe der Sequenz mit dem Wert, den er ersetzt (★ zeigt: das ist ein Joker)
+      const sym = opts.repSuit ? E.SUIT_SYM[opts.repSuit] : '';
+      return `<div class="card joker jrep ${opts.repSuit ? 's-' + opts.repSuit : ''} ${opts.repColor} ${cls}" ${data} aria-label="Joker als ${E.rankLabel(opts.rep)}"><span class="ci"><b>${E.rankLabel(opts.rep)}</b><i>${sym}</i><i class="js">★</i></span><span class="jk"><img src="${EMBLEM}" alt=""></span></div>`;
+    }
     if (c.joker) {
       const rep = opts.rep ? `<span class="rep">${E.rankLabel(opts.rep)}</span>` : '';
       return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jci"><img src="${EMBLEM}" alt=""></span><span class="jci br"><img src="${EMBLEM}" alt=""></span><span class="jk"><img src="${EMBLEM}" alt=""><em>JOKER</em></span>${rep}${opts.badge ? '<span class="newbadge">NEU</span>' : ''}</div>`;
@@ -547,7 +560,7 @@
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
           const ok = layTarget && !(v.ownLocked && m.owner === me) && E.layOffResult(m, ui.selected.map((id) => handById.get(id)));
-          return `<div class="meld ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, { rep: c.joker ? m.ranks[k] : 0 })).join('')}</div>`;
+          return `<div class="meld ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})).join('')}</div>`;
         }).join('')}
       </div></div>`);
     }

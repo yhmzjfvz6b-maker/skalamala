@@ -1048,3 +1048,11 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
   transform: translate(-50%, -50%) rotate(10deg); }
 /* 1.48: überlappende Mini-Karten – jedes Kärtchen eigene Ebene, damit kein Symbol in die Nachbarkarte rutscht */
 .meld .card, .staged .card, .spcards .card, .res .card { isolation: isolate; }
+/* 1.49: Joker in Sequenzen in der Farbe der Sequenz */
+.card.joker.jrep.red { --tint: #ffe1e3; --ink-c: #c8142a; }
+.card.joker.jrep.black { --tint: #dfeaff; --ink-c: #1b3f9a; }
+.card.joker.jrep { background: var(--tint) !important; }
+.card.joker.jrep .ci { display: flex !important; color: var(--ink-c) !important; }
+.card.joker.jrep .ci .js { color: #6a2fb0; font-style: normal; font-size: .9em; margin-top: 1px; }
+.card.joker.jrep .jk { opacity: .55; }
+.card.joker.jrep .jk em { display: none; }
