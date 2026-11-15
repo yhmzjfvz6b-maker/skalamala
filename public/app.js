@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.36 · 15.11.2026';
+  const VERSION = '1.37 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -247,6 +247,38 @@
   // ---------- Navigation ----------
   function go(screen) { ui.screen = screen; render(); }
 
+  // Geräusche aus den Spielereignissen ableiten
+  function playEvents(prev, v) {
+    const S = window.SkSound;
+    if (!S || !prev || prev.round !== v.round) return;
+    const ended = (v.phase === 'roundEnd' || v.phase === 'gameEnd') && prev.phase !== v.phase;
+    if (ended) return S.play('win');
+    const downs = (x) => x.players.filter((p) => p.down).length;
+    if (downs(v) > downs(prev)) return S.play('tusch');
+    const knocks = (x) => Object.values(x.knock.responses || {}).filter((r) => r === 'knock').length;
+    if (knocks(v) > knocks(prev)) S.play('knock');
+    if (v.stockCount < prev.stockCount || (v.discardCount < prev.discardCount && v.phase === 'play')) S.play('draw');
+    else if (v.discardCount > prev.discardCount) S.play('discard');
+  }
+
+  // Ton-Einstellungen (Musik / Geräusche: an/aus + Lautstärke)
+  function soundControls() {
+    const S = window.SkSound;
+    if (!S) return '';
+    const row = (k, label) => `<div class="sndrow">
+        <button class="btn small ${S.get(k + 'On') ? 'on' : ''}" data-a="snd" data-k="${k}On">${S.get(k + 'On') ? '🔊' : '🔇'} ${label}</button>
+        <input type="range" min="0" max="100" step="5" value="${S.get(k + 'Vol')}" data-snd="${k}Vol" aria-label="${label} Lautstärke">
+      </div>`;
+    return `<div class="sndbox">${row('music', 'Musik')}${row('sfx', 'Geräusche')}</div>`;
+  }
+  document.addEventListener('input', (e) => {
+    const k = e.target && e.target.dataset && e.target.dataset.snd;
+    if (!k || !window.SkSound) return;
+    window.SkSound.set(k, +e.target.value);
+    const on = k.replace('Vol', 'On');
+    if (+e.target.value > 0 && !window.SkSound.get(on)) { window.SkSound.set(on, true); }
+  });
+
   function onView(v) {
     const prev = ui.view;
     ui.view = v;
@@ -260,6 +292,9 @@
       const added = v.hand.filter((c) => !old.has(c.id)).map((c) => c.id);
       if (added.length) ui.newIds = added;
       else if (v.current === v.seat && v.phase === 'draw' && prev.phase !== 'draw') ui.newIds = [];
+      // vom Server gemeldet, was ich zuletzt bekommen habe (z. B. geklopfte Karte + Strafkarte)
+      if (v.gotSeq && v.gotSeq !== prev.gotSeq && v.got && v.got.length) ui.newIds = v.got.slice();
+      playEvents(prev, v);
     }
     ui.newIds = (ui.newIds || []).filter((id) => ids.has(id));
     ui.selected = ui.selected.filter((id) => ids.has(id));
@@ -325,6 +360,7 @@
           </div>
           <p class="hint" style="margin:6px 0 0">${ui.tips ? 'Zeigt dir während des Spiels Vorschläge: welche Karte nehmen, auslegen, anlegen oder abwerfen.' : 'Turnier: ohne Tipps – alle spielen auf eigene Faust.'}</p>
         </div>
+        <div class="field"><label>Ton</label>${soundControls()}</div>
         <h2>Gegen Bots</h2>
         <div class="row">
           <span>Anzahl Bots</span>
@@ -897,6 +933,7 @@
     ui.dragging = false;
     if (!d.moved) {
       if (cancel) return;
+      if (window.SkSound) window.SkSound.play('click');
       const now = Date.now();
       if (ui.lastTap && ui.lastTap.id === d.id && now - ui.lastTap.t < 380) {
         // Doppelklick: erster Klick hat ausgewählt – rückgängig machen, dann verschieben
@@ -987,6 +1024,7 @@
 
   function handle(a, el) {
     const v = ui.view;
+    if (window.SkSound && a !== 'snd') window.SkSound.play('click');
     switch (a) {
       case 'botsMinus': ui.bots = Math.max(1, ui.bots - 1); store.set('bots', ui.bots); document.getElementById('bots').textContent = ui.bots; return;
       case 'botsPlus': ui.bots = Math.min(5, ui.bots + 1); store.set('bots', ui.bots); document.getElementById('bots').textContent = ui.bots; return;
@@ -1040,6 +1078,13 @@
       case 'kick': return ui.ctl.send({ t: 'kick', seat: +el.dataset.seat });
       case 'start': return ui.ctl.send({ t: 'start' });
       case 'roomTips': return ui.ctl.send({ t: 'tips', on: el.dataset.v === '1' });
+      case 'snd': {
+        const k = el.dataset.k;
+        window.SkSound && window.SkSound.set(k, !window.SkSound.get(k));
+        const box = el.closest('.sndbox');
+        if (box) box.outerHTML = soundControls();
+        return;
+      }
       case 'langDe': case 'langKsh': case 'langEn': {
         ui.lang = a === 'langKsh' ? 'ksh' : a === 'langEn' ? 'en' : 'de'; store.set('lang', ui.lang);
         applyLang();
@@ -1064,6 +1109,7 @@
       case 'menu':
         return openModal(`<button class="btn small ghost close" data-close>Schließen</button><h2>Menü</h2>
           <label class="toggle"><input type="checkbox" id="kp2" ${ui.knockPrompt ? 'checked' : ''}> Bei fremden Zügen fragen, ob ich klopfen will</label>
+          <div style="margin-top:10px">${soundControls()}</div>
           <div class="row" style="margin-top:10px"><span>Sprache</span><div class="modesel" data-nok><button class="btn small ${ui.lang === 'de' ? 'on' : ''}" data-a="langDe">Deutsch</button><button class="btn small ${ui.lang === 'ksh' ? 'on' : ''}" data-a="langKsh">Kölsch</button><button class="btn small ${ui.lang === 'en' ? 'on' : ''}" data-a="langEn">English</button></div></div>
           <div class="row" style="margin-top:14px"><button class="btn small" data-a="rules">📜 Spielregeln</button></div>
           <h3>Verlauf</h3><ul class="loglist">${v.log.slice().reverse().map((l) => `<li>${esc(l.msg)}</li>`).join('')}</ul>

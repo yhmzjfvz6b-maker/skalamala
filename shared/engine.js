@@ -335,6 +335,11 @@
     return knockPending(s).length === 0;
   }
 
+  // Merkt, welche Karten ein Spieler zuletzt bekommen hat (für die NEU-Markierung)
+  function gave(s, seat, ids) {
+    s.got = s.got || {}; s.gotSeq = s.gotSeq || {};
+    s.got[seat] = ids.slice(); s.gotSeq[seat] = (s.gotSeq[seat] || 0) + 1;
+  }
   function resolveKnock(s) {
     const winner = firstKnocker(s);
     if (winner !== undefined) {
@@ -343,12 +348,14 @@
       p.hand.push(c);
       const pen = drawFromStock(s);
       if (pen) p.hand.push(pen);
+      gave(s, winner, pen ? [c.id, pen.id] : [c.id]);
       log(s, `👊 ${p.name} klopft und nimmt ${cardLabel(c)} + 1 verdeckte Karte.`);
     }
     const c = drawFromStock(s);
     s.knock = { responses: {}, deadline: 0, order: [] };
     if (!c) return endRound(s, null);
     s.players[s.current].hand.push(c);
+    gave(s, s.current, [c.id]);
     s.phase = 'play';
     s.lastDrawn = c.id;
     log(s, `${s.players[s.current].name} zieht vom Stapel.`);
@@ -440,6 +447,7 @@
         if (!s.discard.length) return 'Die Ablage ist leer';
         const c = s.discard.pop();
         p.hand.push(c);
+        gave(s, seat, [c.id]);
         s.lastDrawn = c.id;
         s.lastTaken = c.id;
         s.taken[c.id] = (s.taken[c.id] || 0) + 1;
@@ -465,6 +473,7 @@
         const c = drawFromStock(s);
         if (!c) { endRound(s, null); return null; }
         p.hand.push(c);
+        gave(s, seat, [c.id]);
         s.lastDrawn = c.id;
         s.phase = 'play';
         log(s, `${p.name} zieht vom Stapel.`);
@@ -528,6 +537,7 @@
       s.mustPlay = (s.mustPlay || []).filter((id) => !cards.some((c) => c.id === id));
       if (res.joker) {
         p.hand.push(res.joker);
+        gave(s, seat, [res.joker.id]);
         s.lastDrawn = res.joker.id;
         s.mustPlay.push(res.joker.id);
         log(s, `🔄 ${p.name} tauscht ${cardLabel(cards[0])} gegen den Joker – der Joker muss in diesem Zug wieder angelegt werden.`);
@@ -574,6 +584,8 @@
       reshuffles: s.reshuffles,
       lastDrawn: seat === s.current ? s.lastDrawn : null,
       mustPlay: seat === s.current ? (s.mustPlay || []).slice() : [],
+      got: seat != null && s.got && s.got[seat] ? s.got[seat].slice() : [],
+      gotSeq: seat != null && s.gotSeq ? s.gotSeq[seat] || 0 : 0,
       ownLocked: seat != null && s.players[seat] ? (s.players[seat].down && s.players[seat].downTurn === s.turn) : false,
       knock: {
         responses: Object.assign({}, s.knock.responses),

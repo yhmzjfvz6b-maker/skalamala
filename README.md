@@ -93,3 +93,7 @@ Auf der Startseite erscheint dafür der Knopf „🎪 Rummy Club betreten“. Ma
 ## Sprachen
 
 Auf der Startseite (und im Menü ☰) lässt sich die Sprache wählen: **Deutsch**, **Op Kölsch 🍺** oder **English**. Die Wahl gilt nur für das eigene Gerät – online kann jeder in seiner Sprache spielen. Auf Englisch heißen Bube und Dame „J“ und „Q“. Die Übersetzungen stehen in `public/koelsch.js`.
+
+## Musik und Geräusche
+
+Eigene Hintergrundmusik (Schunkelwalzer, selbst komponiert – keine GEMA) und Geräusche (Klick, Karte ziehen, Abwerfen, Klopfen, kölscher Tusch beim Auslegen und beim Gewinnen) werden im Browser erzeugt (`public/sound.js`). Musik und Geräusche lassen sich auf der Startseite und im Menü ☰ getrennt ein-/ausschalten und in der Lautstärke regeln.

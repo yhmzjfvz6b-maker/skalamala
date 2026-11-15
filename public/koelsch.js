@@ -5,6 +5,7 @@
   // Ganze Sätze und Wendungen zuerst (Reihenfolge zählt)
   const KSH_PHRASES = [
     [/Los geht's/g, 'Loss jon!'],
+    [/Geräusche/g, 'Jeräusche'], [/Musik/g, 'Musik'], [/^Ton$/g, 'Tön'],
     [/ – (.+?) gibt, (.+?) beginnt\./g, ' – $1 jitt, $2 fängk aan.'],
     [/Bitte zuerst deinen Namen eingeben\./g, 'Bes esu jot un jif zoeets dinge Name en.'],
     [/Bitte erst eine Karte nehmen – vom Stapel oder von der Ablage\./g, 'Eets ens en Kaat nemme – vum Stapel oder vun dr Ablach.'],
@@ -263,6 +264,7 @@
     [/Ein Bot spielt für dich weiter\. Mit demselben Namen kannst du später wieder einsteigen\./g, 'A bot keeps playing for you. Rejoin later with the same name.'],
     [/Das laufende Spiel gegen die Bots wird beendet\./g, 'The current game against the bots will end.'],
     [/Weiterspielen/g, 'Keep playing'], [/Ja, verlassen/g, 'Yes, leave'], [/Wenigste Punkte gewinnen\./g, 'Fewest points win.'],
+    [/^Ton$/g, 'Sound'], [/Musik/g, 'Music'], [/Geräusche/g, 'Sound effects'], [/ Lautstärke/g, ' volume'],
     [/^Menü$/g, 'Menu'], [/^Verlauf$/g, 'History'], [/^Schließen$/g, 'Close'],
     [/ – (.+?) gibt, (.+?) beginnt\./g, ' – $1 deals, $2 starts.'], [/Runde (\d+):/g, 'Round $1:'], [/^Geber$/g, 'Dealer'],
     [new RegExp(N + ' legt aus: ', 'g'), '$1 melds: '],

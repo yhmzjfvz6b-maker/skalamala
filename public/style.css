@@ -1025,3 +1025,9 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 /* 1.36: Anlegen vorne/hinten – Markierung beim Ziehen */
 .meld.drop-start { box-shadow: inset 6px 0 0 #ffd23f, 0 0 0 2px rgba(255,210,63,.6) !important; }
 .meld.drop-end { box-shadow: inset -6px 0 0 #ffd23f, 0 0 0 2px rgba(255,210,63,.6) !important; }
+/* 1.37: Ton-Einstellungen */
+.sndbox { display: grid; gap: 8px; }
+.sndrow { display: flex; align-items: center; gap: 10px; }
+.sndrow .btn { min-width: 132px; justify-content: flex-start; }
+.sndrow .btn:not(.on) { opacity: .7; }
+.sndrow input[type=range] { flex: 1; accent-color: #ffd23f; min-width: 80px; }
