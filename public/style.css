@@ -1086,3 +1086,7 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 #zoom .zcards .card { --cw: min(15vw, 120px); margin: 0; }
 #zoom .zhint { color: #fff; opacity: .7; font-size: .8rem; margin-top: 12px; }
 .meld { cursor: zoom-in; }
+/* 1.55: Auslage noch etwas größer */
+:root { --mw: clamp(40px, 9.6vw, 60px); }
+@media (min-width: 900px) { :root { --mw: 74px; } }
+.card.joker.jrep .ci b, .card.joker.jrep .ci i:not(.js) { color: var(--ink-c) !important; }
