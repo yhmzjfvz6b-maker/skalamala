@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.55 · 15.11.2026';
+  const VERSION = '1.56 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -342,7 +342,7 @@
     if (ui.dragging) { ui.pendingRender = true; return; }
     if (ui.screen === 'home') return renderHome();
     if (ui.screen === 'lobby') return renderLobby();
-    if (ui.screen === 'game' && ui.view) return renderGame();
+    if (ui.screen === 'game' && ui.view) { renderGame(); refreshPop(); }
   }
 
   function renderHome() {
@@ -748,7 +748,7 @@
       <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Es gilt: <b>wer zuerst klopft</b>, bekommt die Karte – der Spieler am Zug hat aber immer Vorrang: er kann zustimmen (👍) oder ablehnen (👎 – dann bekommt niemand die Karte und es gibt keine Strafkarte; er nimmt ganz normal offen oder verdeckt). Die Abfrage bleibt stehen, bis er sich entschieden hat. Zieht er vom Stapel, bekommt der erste Klopfer die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
       <h3>Bedienung</h3>
       <p>Karten <b>antippen</b> zum Auswählen. Karten <b>ziehen</b>, um sie in deine Wunsch-Reihenfolge zu bringen („Farbe“ oder „Wert“ sortiert automatisch). Eine Karte auf die Ablage ziehen wirft sie ab, auf eine Kombination ziehen legt sie an.</p>
-      <p><b>Groß ansehen:</b> Kombination auf dem Tisch antippen (ohne ausgewählte Karte) oder Sammelstapel bzw. Ablage <b>gedrückt halten</b> – die Karten erscheinen groß.</p>
+      <p><b>Groß ansehen:</b> Mit der Maus über eine Kombination, einen Sammelstapel oder die Ablage fahren – die Karten treten größer hervor. Auf Handy/Tablet: den Finger kurz darauf halten.</p>
       <p><b>Doppelklick</b> auf eine Karte schiebt sie in den Sammelstapel, Doppelklick im Sammelstapel holt sie zurück.</p>
       <p><b>Sammelstapel:</b> Zieh Karten auf das ＋ (oder wähle sie aus und tippe „＋ Sammelstapel“), um z. B. einen Drilling oder eine Straße mit Joker zu sammeln. Ein grüner Haken zeigt, dass der Stapel gültig ist. Erfüllen deine Stapel die Vorgabe der Runde, erscheint „Auslegen“.</p>
       <h3>Kombinationen</h3>
@@ -787,7 +787,7 @@
       <p>Before the player whose turn it is draws from the stock, the others may knock for the face-up card. <b>Whoever knocks first</b> gets the card – but the player on turn always has priority: they can approve (👍) or reject (👎 – then nobody gets the card and there is no penalty card; they simply draw from the discard pile or the stock). The question stays until they decide. If they draw from the stock, the first knocker gets the card <b>plus a face-down penalty card</b>. No knocking in round 6.</p>
       <h3>Controls</h3>
       <p><b>Tap</b> cards to select them. <b>Drag</b> cards to put them in your preferred order („Suit“ or „Rank“ sorts automatically). Dragging a card onto the discard pile discards it, dragging it onto a meld lays it off.</p>
-      <p><b>Enlarge:</b> tap a meld on the table (with no card selected) or <b>press and hold</b> a collect pile or the discard pile – the cards are shown large.</p>
+      <p><b>Enlarge:</b> move the mouse over a meld, a collect pile or the discard pile – the cards pop out larger. On phone/tablet: hold your finger on it briefly.</p>
       <p><b>Double-click</b> a card to move it into a collect pile, double-click in the collect pile to take it back.</p>
       <p><b>Collect piles:</b> drag cards onto the ＋ (or select them and tap „＋ Collect pile“) to collect e.g. three of a kind or a run with a joker. A green tick shows the pile is valid. When your piles meet the round's contract, „Meld“ appears.</p>
       <h3>Combinations</h3>
@@ -855,46 +855,78 @@
   }
 
   // ---------- Eingaben ----------
-  // ---------- Vergrößerte Ansicht (Auslage, Sammelstapel, Ablage) ----------
-  function openZoom(kind, id) {
+  // ---------- Hervorheben: Kombination / Sammelstapel / Ablage tritt größer hervor ----------
+  const POP_SEL = '[data-meld], #pilerow .spile[data-pile]:not(.new), [data-drop="discard"]';
+  function popCards(kind, id) {
     const v = ui.view;
-    if (!v) return;
-    let cards = [], title = '';
+    if (!v) return null;
     if (kind === 'meld') {
       const m = v.melds.find((x) => x.id === id);
-      if (!m) return;
-      title = `${esc(v.players[m.owner].name)} · ${E.TYPE_NAME[m.t]}`;
-      cards = m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {}));
-    } else if (kind === 'pile') {
-      const ids = ui.piles[id] || [];
-      const byId = new Map(v.hand.map((c) => [c.id, c]));
-      title = 'Sammelstapel';
-      cards = ids.map((x) => byId.get(x)).filter(Boolean).map((c) => cardHTML(c));
-    } else if (kind === 'discard') {
-      if (!v.discardTop) return;
-      title = `Ablage (${v.discardCount})`;
-      cards = [cardHTML(v.discardTop)];
+      return m ? m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})) : null;
     }
-    if (!cards.length) return;
-    closeZoom();
-    const z = document.createElement('div');
-    z.id = 'zoom';
-    z.innerHTML = `<div class="zbox"><div class="ztitle">${title}</div><div class="zcards">${cards.join('')}</div><div class="zhint">Tippen zum Schließen</div></div>`;
-    z.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); closeZoom(); ui.suppressTap = Date.now(); });
-    document.body.appendChild(z);
+    if (kind === 'pile') {
+      const byId = new Map(v.hand.map((c) => [c.id, c]));
+      return (ui.piles[id] || []).map((x) => byId.get(x)).filter(Boolean).map((c) => cardHTML(c));
+    }
+    return v.discardTop ? [cardHTML(v.discardTop)] : null;
   }
-  function closeZoom() { const z = document.getElementById('zoom'); if (z) z.remove(); }
-  // Gedrückt halten = vergrößern
+  const popKey = (t) => (t.dataset.meld ? 'meld:' + t.dataset.meld : t.dataset.pile ? 'pile:' + t.dataset.pile : 'discard:0');
+  function showPop(t, instant) {
+    const [kind, sid] = popKey(t).split(':');
+    const cards = popCards(kind, +sid);
+    if (!cards || !cards.length) return hidePop();
+    let p = document.getElementById('pop');
+    if (!p) { p = document.createElement('div'); p.id = 'pop'; document.body.appendChild(p); }
+    p.className = (kind === 'meld' ? 'fan' : '') + (instant ? ' instant' : '');
+    p.innerHTML = cards.join('');
+    ui.popKey = popKey(t);
+    p.style.left = '0px'; p.style.top = '0px';
+    const r = t.getBoundingClientRect(), pr = { width: p.offsetWidth, height: p.offsetHeight }; // offset* = ohne Animations-Skalierung
+    let x = r.left + r.width / 2 - pr.width / 2, y = r.top + r.height / 2 - pr.height / 2;
+    x = Math.max(6, Math.min(innerWidth - pr.width - 6, x)); y = Math.max(6, Math.min(innerHeight - pr.height - 6, y));
+    p.style.left = x + 'px'; p.style.top = y + 'px';
+  }
+  function hidePop() { const p = document.getElementById('pop'); if (p) p.remove(); ui.popKey = null; }
+  let popTimer = null, mouse = { x: -1, y: -1 }, touchHold = false;
+  function refreshPop() {
+    if (!ui.popKey) return;
+    const el = touchHold ? null : document.elementFromPoint(mouse.x, mouse.y);
+    const t = el && el.closest(POP_SEL);
+    if (t && popKey(t) === ui.popKey) showPop(t, true);
+    else if (touchHold) { const tt = [...document.querySelectorAll(POP_SEL)].find((x) => popKey(x) === ui.popKey); if (tt) showPop(tt, true); else hidePop(); }
+    else hidePop();
+  }
+  // Maus: kurz darüber verweilen
+  $app.addEventListener('pointerover', (e) => {
+    if (e.pointerType !== 'mouse' || drag) return;
+    const t = e.target.closest(POP_SEL);
+    if (!t || popKey(t) === ui.popKey) return;
+    clearTimeout(popTimer);
+    popTimer = setTimeout(() => showPop(t), 220);
+  });
+  window.addEventListener('pointermove', (e) => {
+    mouse = { x: e.clientX, y: e.clientY };
+    if (e.pointerType !== 'mouse' || !ui.popKey && !popTimer) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const t = el && el.closest(POP_SEL);
+    if (!t) { clearTimeout(popTimer); popTimer = null; hidePop(); }
+  }, { passive: true });
+  // Finger: gedrückt halten, loslassen = wieder klein
   let lp = null;
   $app.addEventListener('pointerdown', (e) => {
-    const t = e.target.closest('[data-meld], #pilerow .spile[data-pile]:not(.new), [data-drop="discard"]');
+    hidePop();
+    if (e.pointerType === 'mouse') return;
+    const t = e.target.closest(POP_SEL);
     if (!t) return;
-    const kind = t.dataset.meld ? 'meld' : t.dataset.pile ? 'pile' : 'discard';
-    const id = kind === 'meld' ? +t.dataset.meld : kind === 'pile' ? +t.dataset.pile : 0;
     clearTimeout(lp && lp.timer);
-    lp = { x: e.clientX, y: e.clientY, timer: setTimeout(() => { lp = null; ui.suppressTap = Date.now(); if (drag) { drag = null; clearDropMarks(); document.querySelectorAll('.dragghost').forEach((g) => g.remove()); render(); } openZoom(kind, id); }, 450) };
+    lp = { x: e.clientX, y: e.clientY, timer: setTimeout(() => { lp = null; touchHold = true; ui.suppressTap = Date.now(); showPop(t); }, 380) };
   }, true);
-  const lpCancel = (e) => { if (!lp) return; if (e.type === 'pointermove' && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) < 8) return; clearTimeout(lp.timer); lp = null; };
+  const lpCancel = (e) => {
+    if (e.type !== 'pointermove' && touchHold) { touchHold = false; hidePop(); ui.suppressTap = Date.now(); }
+    if (!lp) return;
+    if (e.type === 'pointermove' && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) < 8) return;
+    clearTimeout(lp.timer); lp = null;
+  };
   ['pointermove', 'pointerup', 'pointercancel'].forEach((ev) => window.addEventListener(ev, lpCancel, true));
 
   $app.addEventListener('click', (e) => {
@@ -902,8 +934,7 @@
     if (e.target.closest('#hand .card, #pilerow .card')) return; // per Zeiger-Logik (Tippen/Ziehen)
     const meldEl = e.target.closest('[data-meld]');
     if (meldEl) {
-      // ohne ausgewählte Karten: Kombination groß anzeigen
-      if (!ui.selected.length) return openZoom('meld', +meldEl.dataset.meld);
+      if (!ui.selected.length) return;
       return layOff(+meldEl.dataset.meld, meldEnd(meldEl, e.clientX));
     }
     const b = e.target.closest('[data-a]');

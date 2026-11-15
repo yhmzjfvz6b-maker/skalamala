@@ -1090,3 +1090,14 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 :root { --mw: clamp(40px, 9.6vw, 60px); }
 @media (min-width: 900px) { :root { --mw: 74px; } }
 .card.joker.jrep .ci b, .card.joker.jrep .ci i:not(.js) { color: var(--ink-c) !important; }
+/* 1.56: Hervorheben statt Vollbild-Ansicht */
+.meld { cursor: default; }
+#pop { position: fixed; z-index: 9400; pointer-events: none; display: flex; gap: 0; padding: 10px 12px; border-radius: 16px;
+  background: rgba(10,30,102,.92); box-shadow: 0 0 0 3px #ffd23f, 0 18px 40px rgba(0,0,0,.55); animation: popout .16s ease-out; }
+#pop.instant { animation: none; }
+#pop .card { --cw: min(13vw, 92px); margin: 0; flex: none; }
+#pop.fan .card { margin-right: calc(min(13vw, 92px) * -.38); }
+#pop.fan .card:last-child { margin-right: 0; }
+#pop .card .newbadge { display: none; }
+@keyframes popout { from { transform: scale(.6); opacity: 0; } }
+#pop .card { isolation: isolate; }
