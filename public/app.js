@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.22 · 15.11.2026';
+  const VERSION = '1.23 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -45,11 +45,11 @@
     const data = `data-id="${c.id}"`;
     if (c.joker) {
       const rep = opts.rep ? `<span class="rep">${E.rankLabel(opts.rep)}</span>` : '';
-      return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jk">${JESTER}<em>JOKER</em></span>${rep}${opts.badge ? '<span class="newbadge">NEU</span>' : ''}</div>`;
+      return `<div class="card joker ${cls}" ${data} aria-label="Joker"><span class="ci"><b>★</b></span><span class="jk"><img src="${EMBLEM}" alt=""><em>JOKER</em></span>${rep}${opts.badge ? '<span class="newbadge">NEU</span>' : ''}</div>`;
     }
     const r = E.rankLabel(c.rank), s = E.SUIT_SYM[c.suit];
     const badge = opts.badge ? '<span class="newbadge">NEU</span>' : '';
-    return `<div class="card s-${c.suit} ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span>${badge}</div>`;
+    return `<div class="card s-${c.suit} ${E.isRed(c) ? 'red' : 'black'} ${cls}" ${data} aria-label="${E.SUIT_NAME[c.suit]} ${r}"><span class="ci"><b>${r}</b><i>${s}</i></span><span class="cs">${s}</span><span class="ci br"><b>${r}</b><i>${s}</i></span><span class="stile">S</span>${badge}</div>`;
   }
 
   const SUIT_ORDER = { S: 0, H: 1, C: 2, D: 3 };

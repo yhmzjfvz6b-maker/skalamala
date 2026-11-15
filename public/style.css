@@ -881,3 +881,48 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .card.joker .rep { color: #7a1f4a; font-family: 'Playfair Display', Georgia, serif; font-weight: 900; }
 .card.empty { background: rgba(255,255,255,.06) !important; border: 3px dashed rgba(255,255,255,.4) !important; box-shadow: none !important; }
 .card.empty::before { display: none !important; }
+
+/* =====================================================================
+   Kartendesign F – „Pastell“: zarte Kartenfarbe je Farbe, Logo-Schrift,
+   geneigtes „S“-Kärtchen gegenüber dem Wert, Joker mit S-Emblem
+   ===================================================================== */
+.card { --tint: #f2f4fa; --ink-c: #1d1a17; }
+.card.s-H { --tint: #ffe1e3; --ink-c: #c8142a; }
+.card.s-D { --tint: #ffeccc; --ink-c: #d35400; }
+.card.s-S { --tint: #dfeaff; --ink-c: #1b3f9a; }
+.card.s-C { --tint: #ddf5e2; --ink-c: #17733a; }
+.card.joker { --tint: #efe3ff; --ink-c: #6a2fb0; }
+.card, .card.card:not(.joker):not(.empty), .card.joker {
+  background: var(--tint) !important;
+  border: calc(var(--cw) * .04 + 1px) solid #fff !important;
+  box-shadow: 0 0 0 1px rgba(10,30,102,.18), 0 4px 0 rgba(10,30,102,.35), 0 8px 14px rgba(0,0,0,.22) !important;
+}
+.card::before, .card::after { display: none !important; }
+.card .ci { top: 6%; left: 9%; }
+.card .ci b { font-family: 'Lilita One', var(--display); font-weight: 400; font-size: calc(var(--cw) * .33); letter-spacing: 0; }
+.card .ci i { font-size: calc(var(--cw) * .2); margin-top: 0; }
+.card .ci.br { display: none !important; }
+.card .cs { font-size: calc(var(--cw) * .56); padding-top: 14%; }
+.stile {
+  position: absolute; z-index: 2; right: 8%; bottom: 6%;
+  width: calc(var(--cw) * .27); height: calc(var(--cw) * .35);
+  display: grid; place-items: center; background: #fff;
+  border: max(1.5px, calc(var(--cw) * .028)) solid #0a1e66; border-radius: calc(var(--cw) * .05);
+  box-shadow: inset 0 0 0 max(1px, calc(var(--cw) * .018)) #fff, inset 0 0 0 max(2px, calc(var(--cw) * .034)) #ffd23f, 1px 2px 0 rgba(10,30,102,.35);
+  font-family: 'Inter', var(--display); font-weight: 900; font-size: calc(var(--cw) * .22); line-height: 1; color: #e3262b;
+  transform: rotate(-10deg);
+}
+/* kleine Karten (Auslage, Sammelstapel, Ergebnis): nur Ecke */
+.meld .card .stile, .staged .card .stile, .spcards .card .stile, .res .card .stile { display: none; }
+.meld .card, .staged .card, .spcards .card, .res .card { border-width: 2px !important; }
+.meld .card .ci b, .spcards .card .ci b, .staged .card .ci b { font-size: calc(var(--cw) * .36); }
+.meld .card .cs, .staged .card .cs, .spcards .card .cs { font-size: calc(var(--cw) * .44); padding: 36% 0 0 30%; }
+/* Joker mit S-Emblem */
+.card.joker .jk { display: grid !important; place-items: center; }
+.card.joker .jk img { width: 62%; height: auto; margin-top: -14%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+.card.joker .jk em { font-family: 'Lilita One', var(--display); font-weight: 400; color: #6a2fb0; letter-spacing: .04em; font-size: calc(var(--cw) * .16); bottom: 6%; }
+.card.joker .ci b { color: #6a2fb0; font-family: 'Lilita One', var(--display); }
+.card.joker .rep { color: #6a2fb0; font-family: 'Lilita One', var(--display); font-weight: 400; }
+.meld .card.joker .jk, .staged .card.joker .jk, .spcards .card.joker .jk, .res .card.joker .jk { display: none !important; }
+.card .cs { font-size: calc(var(--cw) * .5); padding: 0 10% 6% 0; }
+.knockprompt .card .cs { padding: 0 10% 6% 0; }
