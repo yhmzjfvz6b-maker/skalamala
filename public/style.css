@@ -1040,3 +1040,9 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .card.s-C { --tint: #dfeaff; --ink-c: #1b3f9a; }
 /* 1.42: kleines S im Farbsymbol – runde Ecken, noch etwas kleiner */
 .card .csg b { font-size: .17em; border-radius: .32em; padding: .08em .2em .05em; }
+/* 1.45: S im Farbsymbol = kleines Ebenbild des S-Kärtchens oben rechts */
+.card .csg b { font-size: .19em; width: 1.3em; height: 1.65em; padding: 0; display: grid; place-items: center;
+  background: #fff; color: #e3262b; font-family: 'Inter', var(--display); font-weight: 900; line-height: 1;
+  border: max(1px, .13em) solid #0a1e66; border-radius: .28em;
+  box-shadow: inset 0 0 0 max(1px, .08em) #fff, inset 0 0 0 max(1.5px, .17em) #ffd23f, 1px 1px 0 rgba(10,30,102,.35);
+  transform: translate(-50%, -50%) rotate(10deg); }
