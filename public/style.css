@@ -845,3 +845,39 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .thumb.down { background: radial-gradient(circle at 35% 30%, #ff8a8f, #b3141c); }
 .thumb:hover { transform: scale(1.06); }
 .knockprompt.approve .card { --cw: 64px; margin: 6px auto; }
+
+/* =====================================================================
+   Kartendesign D – „Kölsche Kneipe“: cremefarbenes Papier,
+   brauner Doppelrahmen, Zeitungsschrift (Playfair Display)
+   ===================================================================== */
+.card { --paper: #f8f1df; --frame: #8a6d3b; --ink-c: #1d1a17; }
+.card.red { --ink-c: #b3141c; }
+.card, .card.card:not(.joker):not(.empty), .card.joker {
+  background: radial-gradient(120% 90% at 30% 20%, #fffaf0 0%, var(--paper) 55%, #efe4c8 100%) !important;
+  border: 1px solid #c9b78f !important;
+  box-shadow: 0 3px 0 rgba(60,40,10,.35), 0 8px 14px rgba(0,0,0,.25);
+}
+.card::before {
+  inset: 5%; border-radius: calc(var(--cw) * .07);
+  border: max(1.5px, calc(var(--cw) * .018)) solid var(--frame) !important;
+  box-shadow: inset 0 0 0 max(2px, calc(var(--cw) * .03)) var(--paper), inset 0 0 0 calc(max(2px, calc(var(--cw) * .03)) + 1px) var(--frame);
+  background: none !important; padding: 0 !important; -webkit-mask: none !important; mask: none !important;
+}
+.card .ci { top: 9%; left: 13%; }
+.card .ci.br { bottom: 9%; right: 13%; }
+.card .ci b { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-weight: 900; font-size: calc(var(--cw) * .3); letter-spacing: 0; }
+.card .ci i { font-size: calc(var(--cw) * .17); }
+.card .cs { font-size: calc(var(--cw) * .5); padding-top: 3%; }
+.card .ci, .card .cs { color: var(--ink-c) !important; }
+/* kleine Karten */
+.meld .card::before, .staged .card::before, .spcards .card::before, .res .card::before { inset: 6%; border-width: 1px !important; box-shadow: none; }
+.meld .card .ci, .spcards .card .ci, .staged .card .ci { left: 11%; top: 8%; }
+.meld .card .ci b, .spcards .card .ci b, .staged .card .ci b { font-size: calc(var(--cw) * .34); }
+/* Joker */
+.card.joker { --ink-c: #7a1f4a; }
+.card.joker .jk em { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: #7a1f4a; letter-spacing: .14em; font-size: calc(var(--cw) * .13); }
+.card.joker .jk svg { width: 56%; filter: sepia(.15); }
+.card.joker .ci b { color: #7a1f4a; font-family: 'Playfair Display', Georgia, serif; }
+.card.joker .rep { color: #7a1f4a; font-family: 'Playfair Display', Georgia, serif; font-weight: 900; }
+.card.empty { background: rgba(255,255,255,.06) !important; border: 3px dashed rgba(255,255,255,.4) !important; box-shadow: none !important; }
+.card.empty::before { display: none !important; }
