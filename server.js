@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, version: '1.25', rooms: rooms.size }));
+    return res.end(JSON.stringify({ ok: true, version: '1.26', rooms: rooms.size }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');
@@ -114,7 +114,7 @@ const cleanName = (n) => String(n || '').replace(/[<>]/g, '').trim().slice(0, 16
 
 function roomInfo(room, seat) {
   return {
-    code: room.code, host: room.seats.indexOf(room.host), you: seat, started: !!room.game,
+    code: room.code, host: room.seats.indexOf(room.host), you: seat, started: !!room.game, tips: !!room.tips,
     seats: room.seats.map((s) => ({ name: s.name, bot: s.bot, connected: s.bot || !!s.ws })),
   };
 }
@@ -132,6 +132,7 @@ function sendState(room) {
     const rd = room.ready || new Set();
     v.ready = room.seats.map((st) => st.bot || rd.has(st));
     v.multi = true;
+    v.tips = !!room.tips;
     v.players.forEach((p, k) => { const st = room.seats[k]; p.connected = st.bot || !!st.ws; });
     s.ws.send({ t: 'state', view: v });
   });
@@ -201,7 +202,7 @@ function onConnection(ws) {
       case 'create': {
         if (room) return err('Du bist schon in einem Raum.');
         const st = newSeat(cleanName(m.name));
-        const r = { code: newCode(), host: st, seats: [st], game: null, created: Date.now(), emptySince: 0 };
+        const r = { code: newCode(), host: st, seats: [st], game: null, created: Date.now(), emptySince: 0, tips: m.tips !== false };
         rooms.set(r.code, r);
         return attach(r, st);
       }
@@ -235,6 +236,11 @@ function onConnection(ws) {
         if (!st || st === me) return;
         if (st.ws) { const w = st.ws; st.ws = null; w.send({ t: 'kicked' }); w.close(); }
         removeSeat(room, st);
+        return sendRoom(room);
+      }
+      case 'tips': {
+        if (!isHost() || room.game) return;
+        room.tips = !!m.on;
         return sendRoom(room);
       }
       case 'start': {

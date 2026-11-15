@@ -929,3 +929,20 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 /* 1.24: S-Kärtchen oben rechts, gegenüber der Zahl */
 .stile { top: 6%; bottom: auto; right: 8%; transform: rotate(10deg); }
 .card .cs, .knockprompt .card .cs { font-size: calc(var(--cw) * .54); padding: 22% 0 0 0; }
+/* 1.26: schwebende Karte beim Ziehen */
+.card.dragghost { position: fixed !important; z-index: 9999; pointer-events: none; margin: 0 !important; transform-origin: 50% 45%;
+  transition: transform .12s ease-out; box-shadow: 0 0 0 3px #fff, 0 14px 26px rgba(0,0,0,.45) !important; }
+.card.dragghost .newbadge { display: none; }
+.hand .card.dragging, .spcards .card.dragging { opacity: .28; transform: none !important; box-shadow: none; }
+/* 1.26: Tipp-Modus */
+.modesel { display: inline-flex; gap: 6px; background: rgba(0,0,0,.18); padding: 4px; border-radius: 999px; }
+.modesel .btn { background: transparent; box-shadow: none; color: inherit; opacity: .75; }
+.modesel .btn.on { background: #ffd23f; color: #0a1e66; opacity: 1; box-shadow: 0 2px 0 #c99a00; }
+.tipbar { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 7px 12px; border-radius: 12px;
+  background: rgba(255,210,63,.16); border: 1.5px solid rgba(255,210,63,.6); color: #fff3c4; font-weight: 700; font-size: .9rem; line-height: 1.25; }
+.tipbar span { flex: 1; min-width: 0; }
+.tipbar .btn { flex: none; }
+.hand .card.tip { outline: 4px solid #ffd23f; outline-offset: 3px; animation: tipglow 1.4s ease-in-out infinite; }
+@keyframes tipglow { 50% { outline-color: rgba(255,210,63,.35); outline-offset: 6px; } }
+.meld.tipm { outline: 3px solid #ffd23f; outline-offset: 2px; border-radius: 10px; }
+@media (max-width: 700px) { .tipbar { font-size: .78rem; padding: 5px 9px; margin-bottom: 4px; } }

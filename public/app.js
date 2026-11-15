@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.25 · 15.11.2026';
+  const VERSION = '1.26 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -150,6 +150,7 @@
     name: store.get('name', ''),
     bots: store.get('bots', 2),
     knockPrompt: store.get('knockPrompt', true),
+    tips: store.get('tips', true),
     sort: store.get('sort', 'suit'),
     sideW: store.get('sideW', 0),
     order: [], orderRound: -1, dragging: false, pendingRender: false,
@@ -170,6 +171,7 @@
   class LocalCtl {
     constructor(name, nBots) {
       this.mode = 'local';
+      this.tips = ui.tips;
       this.players = [{ name, bot: false }].concat(
         BOT_NAMES.slice().sort(() => Math.random() - 0.5).slice(0, nBots).map((n) => ({ name: n + ' 🤖', bot: true })));
       this.start();
@@ -182,6 +184,7 @@
     emit() {
       const v = this.host.view(0);
       v.host = 0;
+      v.tips = this.tips;
       v.players.forEach((p) => (p.connected = true));
       onView(v);
     }
@@ -305,6 +308,14 @@
           <label for="name">Dein Name</label>
           <input id="name" class="input" maxlength="16" placeholder="z. B. Sabine" value="${esc(ui.name)}" autocomplete="nickname">
         </div>
+        <div class="field">
+          <label>Spielmodus</label>
+          <div class="modesel">
+            <button class="btn small ${ui.tips ? 'on' : ''}" data-a="modeTips">💡 Mit Tipps</button>
+            <button class="btn small ${!ui.tips ? 'on' : ''}" data-a="modeTour">🏆 Turnier</button>
+          </div>
+          <p class="hint" style="margin:6px 0 0">${ui.tips ? 'Zeigt dir während des Spiels Vorschläge: welche Karte nehmen, auslegen, anlegen oder abwerfen.' : 'Turnier: ohne Tipps – alle spielen auf eigene Faust.'}</p>
+        </div>
         <h2>Gegen Bots</h2>
         <div class="row">
           <span>Anzahl Bots</span>
@@ -354,6 +365,10 @@
         <h2>Raumcode</h2>
         <div class="code">${esc(r.code)}</div>
         <div class="row" style="justify-content:center"><button class="btn small ghost" data-a="copyLink" data-link="${esc(link)}">🔗 Einladungslink kopieren</button></div>
+        <div class="row" style="justify-content:center;margin:6px 0 2px">
+          ${isHost ? `<div class="modesel"><button class="btn small ${r.tips ? 'on' : ''}" data-a="roomTips" data-v="1">💡 Mit Tipps</button><button class="btn small ${!r.tips ? 'on' : ''}" data-a="roomTips" data-v="0">🏆 Turnier</button></div>`
+            : `<span class="badge ${r.tips ? '' : 'gold'}">${r.tips ? '💡 Mit Tipps' : '🏆 Turnier – ohne Tipps'}</span>`}
+        </div>
         <ul class="seats">
           ${r.seats.map((s, i) => `
             <li>
@@ -391,10 +406,20 @@
       if (v.phase === 'draw') return { t: 'Du bist dran – zieh eine Karte (Stapel oder Ablage)', mine: true };
       const p = v.players[me];
       if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Genau die Vorgabe auslegen – oder abwerfen', mine: true };
+      if (v.mustPlay && v.mustPlay.length && v.hand.some((c) => v.mustPlay.includes(c.id))) return { t: '🔄 Joker eingetauscht – lege ihn jetzt an eine beliebige Kombination an', mine: true };
       if (v.ownLocked) return { t: 'Ausgelegt! Jetzt abwerfen – anlegen nur bei Gegenspielern, bei dir erst im nächsten Zug', mine: true };
       return { t: 'Anlegen: Karte wählen, dann auf eine Kombination tippen – zum Schluss abwerfen', mine: true };
     }
     return { t: `${cur.name} ist dran${v.phase === 'draw' ? ' (zieht)' : ''}…`, mine: false };
+  }
+
+  function tipFor(v) {
+    const key = [v.round, v.phase, v.current, v.knock.first, (v.knock.pending || []).join(), v.hand.map((c) => c.id).join(), v.discardTop && v.discardTop.id, v.melds.map((m) => m.id + ':' + m.cards.length).join(), v.ownLocked, (v.mustPlay || []).join()].join('|');
+    if (ui.tipKey === key) return ui.tipCache;
+    let t = null;
+    try { t = E.suggest(v); } catch (e) { t = null; }
+    ui.tipKey = key; ui.tipCache = t;
+    return t;
   }
 
   function renderGame() {
@@ -405,6 +430,12 @@
     const stagedIds = new Set([].concat(...ui.piles));
     const contract = !myP.down ? (contractFromPiles(v) || contractFromSelection(v)) : null;
     const handById = new Map(v.hand.map((c) => [c.id, c]));
+    const tip = v.tips ? tipFor(v) : null;
+    ui.tip = tip;
+    const tipIds = new Set(tip ? tip.ids : []);
+    const tipBar = !v.tips ? '' : tip
+      ? `<div class="tipbar"><span>💡 ${esc(tip.text)}</span>${tip.melds && !ui.piles.length ? '<button class="btn small green" data-a="tipApply">Übernehmen</button>' : ''}</div>`
+      : '';
 
     // Spieler-Leiste
     const players = v.players.map((p, i) => {
@@ -453,8 +484,8 @@
       if (!ms.length) continue;
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
-          const ok = layTarget && !(v.ownLocked && m.owner === me) && E.validMeld(m.cards.concat(ui.selected.map((id) => handById.get(id))), m.t);
-          return `<div class="meld ${ok ? 'target' : ''}" data-meld="${m.id}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, { rep: c.joker ? m.ranks[k] : 0 })).join('')}</div>`;
+          const ok = layTarget && !(v.ownLocked && m.owner === me) && E.layOffResult(m, ui.selected.map((id) => handById.get(id)));
+          return `<div class="meld ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, { rep: c.joker ? m.ranks[k] : 0 })).join('')}</div>`;
         }).join('')}
       </div></div>`);
     }
@@ -498,7 +529,7 @@
     // Hand
     const hand = orderedHand(v.hand.filter((c) => !stagedIds.has(c.id)), v.round);
     const handPts = E.handPoints(v.hand);
-    const handHTML = hand.map((c) => cardHTML(c, { cls: `${ui.selected.includes(c.id) ? 'sel' : ''} ${(ui.newIds || []).includes(c.id) ? 'new' : ''}`, badge: (ui.newIds || []).includes(c.id) })).join('');
+    const handHTML = hand.map((c) => cardHTML(c, { cls: `${ui.selected.includes(c.id) ? 'sel' : ''} ${(ui.newIds || []).includes(c.id) ? 'new' : ''} ${tipIds.has(c.id) ? 'tip' : ''}`, badge: (ui.newIds || []).includes(c.id) })).join('');
 
     const lastLog = v.log.length ? v.log[v.log.length - 1].msg : '';
     const warn = !R.knock || R.fromHand;
@@ -527,6 +558,7 @@
               ${ui.selected.length ? '<button class="btn small danger" data-a="clearSel" aria-label="Auswahl aufheben">✕</button>' : ''}
             </span>
           </div>
+          ${tipBar}
           ${pileRow}
           <div class="hand" id="hand">${handHTML}</div>
           <div class="dock">
@@ -633,7 +665,8 @@
         <li><b>Gruppe:</b> gleiche Werte, z. B. 3 Zehnen (Farben egal).</li>
         <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3) – auch rundherum ist erlaubt (K-A-2).</li>
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
-        <li><b>Joker</b> ersetzen jede beliebige Karte – auch mehrere Joker in einer Kombination sind erlaubt.</li>
+        <li><b>Joker</b> ersetzen jede beliebige Karte – in jeder Kombination muss aber mindestens <b>eine echte Karte mehr</b> liegen als Joker (2 Karten + 1 Joker, 3 Karten + 2 Joker …).</li>
+        <li><b>Joker tauschen:</b> Nach dem ersten Auslegen darfst du die passende echte Karte auf den Platz eines Jokers legen. Der Joker kommt auf deine Hand und muss im selben Zug wieder an eine beliebige Kombination angelegt werden.</li>
         <li>Beim <b>ersten Auslegen</b> wird <b>genau die Vorgabe</b> ausgelegt – z. B. in Runde 1 genau eine Gruppe aus 3 Karten und eine Sequenz aus 4 Karten. Steht „mind.“ dabei, darf die Kombination länger sein.</li>
         <li>Im selben Zug darf man danach nur bei den <b>Gegenspielern</b> anlegen. An die <b>eigenen</b> Kombinationen erst ab dem nächsten Zug.</li>
       </ul>
@@ -763,12 +796,27 @@
       drag.el.classList.add('dragging');
       drag.fromPile = !!drag.el.closest('#pilerow');
       drag.rects = [...document.querySelectorAll('#hand .card')].filter((x) => x !== drag.el).map((x) => ({ id: +x.dataset.id, r: x.getBoundingClientRect(), el: x }));
+      // schwebende Kopie am Mauszeiger – bleibt über allen Bereichen sichtbar
+      const r = drag.el.getBoundingClientRect();
+      const g = drag.el.cloneNode(true);
+      g.classList.remove('dragging', 'sel', 'selected', 'new');
+      g.removeAttribute('data-id');
+      g.className += ' dragghost';
+      g.style.cssText = `--cw:${r.width}px;width:${r.width}px;height:${r.height}px;left:${e.clientX}px;top:${e.clientY}px`;
+      document.body.appendChild(g);
+      drag.ghost = g; drag.gw = r.width;
     }
     e.preventDefault();
-    drag.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.max(-8, Math.min(8, dx / 30))}deg) scale(1.06)`;
-    clearDropMarks();
     const under = document.elementFromPoint(e.clientX, e.clientY);
     const special = under && (under.closest('[data-drop="discard"]') || under.closest('[data-meld]') || under.closest('[data-pile]'));
+    const outside = !!special || !(under && under.closest('#hand'));
+    if (drag.ghost) {
+      // in der Hand: normale Größe; über Ablage/Auslage/Sammelstapel: klein am Zeiger
+      const sc = outside ? Math.max(.38, Math.min(.6, 64 / drag.gw)) : 1.04;
+      drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
+      drag.ghost.style.transform = `translate(-50%, -45%) rotate(${Math.max(-8, Math.min(8, dx / 30))}deg) scale(${sc})`;
+    }
+    clearDropMarks();
     if (special) { special.classList.add('drop-on'); return; }
     const sl = dropSlot(e.clientX, e.clientY, drag.rects);
     if (sl) sl.target.el.classList.add(sl.after ? 'drop-r' : 'drop-l');
@@ -776,6 +824,7 @@
   function endDrag(e, cancel) {
     if (!drag || e.pointerId !== drag.pid) return;
     const d = drag; drag = null;
+    if (d.ghost) d.ghost.remove();
     clearDropMarks();
     ui.dragging = false;
     if (!d.moved) {
@@ -874,7 +923,7 @@
         if (!needName()) return;
         store.del('session');
         ui.room = null; go('lobby');
-        ui.ctl = new OnlineCtl({ t: 'create', name: ui.name });
+        ui.ctl = new OnlineCtl({ t: 'create', name: ui.name, tips: ui.tips });
         return;
       case 'join': {
         if (!needName()) return;
@@ -903,6 +952,15 @@
       case 'addBot': return ui.ctl.send({ t: 'addBot' });
       case 'kick': return ui.ctl.send({ t: 'kick', seat: +el.dataset.seat });
       case 'start': return ui.ctl.send({ t: 'start' });
+      case 'roomTips': return ui.ctl.send({ t: 'tips', on: el.dataset.v === '1' });
+      case 'modeTips': case 'modeTour':
+        ui.tips = a === 'modeTips'; store.set('tips', ui.tips); return render();
+      case 'tipApply': {
+        const t = ui.tip;
+        if (!t || !t.melds) return;
+        ui.piles = t.melds.map((m) => m.slice()); ui.selected = []; ui.lastPile = 0;
+        return render();
+      }
       case 'leave': return leaveGame();
       case 'leaveAsk':
         if (ui.view && ui.view.phase === 'gameEnd') return leaveGame();

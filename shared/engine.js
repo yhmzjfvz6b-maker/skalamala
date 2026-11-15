@@ -153,6 +153,9 @@
   function validMeld(cards, t, min) {
     min = min || 0;
     if (cards.length < Math.max(min, 1)) return null;
+    // Immer mindestens eine echte Karte mehr als Joker (2 Karten + 1 Joker, 3 Karten + 2 Joker …)
+    const nj = cards.filter((c) => c.joker).length;
+    if (nj && cards.length - nj <= nj) return null;
     if (t === 'G') {
       const nat = cards.filter((c) => !c.joker);
       if (nat.some((c) => c.rank !== nat[0].rank)) return null;
@@ -161,6 +164,24 @@
     }
     if (t === 'S' || t === 'A') return arrangeRun(cards, t === 'A');
     return null;
+  }
+
+  // Anlegen an eine Kombination. Eine einzelne Karte, die genau den Platz eines Jokers trifft,
+  // ersetzt den Joker – der Joker geht zurück auf die Hand.
+  const sameRank = (a, b) => a === b || (a === 1 && b === 14) || (a === 14 && b === 1);
+  function layOffResult(m, cards) {
+    if (cards.length === 1 && !cards[0].joker) {
+      const c = cards[0];
+      for (let i = 0; i < m.cards.length; i++) {
+        if (!m.cards[i].joker) continue;
+        if (m.t === 'G' ? c.rank !== m.ranks.find((r, k) => !m.cards[k].joker) : !sameRank(c.rank, m.ranks[i])) continue;
+        const nc = m.cards.slice(); nc[i] = c;
+        const arr = validMeld(nc, m.t);
+        if (arr) return { arr, joker: m.cards[i] };
+      }
+    }
+    const arr = validMeld(m.cards.concat(cards), m.t);
+    return arr ? { arr, joker: null } : null;
   }
 
   // Ordnet Kombinationen den Vorgaben der Runde zu (Reihenfolge egal)
@@ -208,6 +229,7 @@
   }
 
   function startRound(s) {
+    s.mustPlay = [];
     s.round++;
     if (s.round > 0) s.dealer = (s.dealer + 1) % s.players.length;
     const deck = shuffle(makeDeck());
@@ -308,6 +330,7 @@
   }
 
   function nextTurn(s) {
+    s.mustPlay = [];
     s.current = (s.current + 1) % s.players.length;
     s.turn = (s.turn || 0) + 1;
     s.phase = 'draw';
@@ -455,11 +478,23 @@
       const ids = a.cardIds || (a.cardId != null ? [a.cardId] : []);
       const cards = takeFromHand(p, ids);
       if (!cards || !cards.length) return 'Karten nicht auf der Hand';
-      const arr = validMeld(m.cards.concat(cards), m.t);
-      if (!arr) return 'Passt nicht an diese Kombination';
+      const res = layOffResult(m, cards);
+      if (!res) {
+        const nj = m.cards.concat(cards).filter((c) => c.joker).length;
+        if (nj && m.cards.length + cards.length - nj <= nj) return 'Zu viele Joker: In jeder Kombination muss mindestens eine echte Karte mehr liegen als Joker.';
+        return 'Passt nicht an diese Kombination';
+      }
       removeFromHand(p, cards);
-      m.cards = arr.map((x) => x.card);
-      m.ranks = arr.map((x) => x.rank);
+      m.cards = res.arr.map((x) => x.card);
+      m.ranks = res.arr.map((x) => x.rank);
+      s.mustPlay = (s.mustPlay || []).filter((id) => !cards.some((c) => c.id === id));
+      if (res.joker) {
+        p.hand.push(res.joker);
+        s.lastDrawn = res.joker.id;
+        s.mustPlay.push(res.joker.id);
+        log(s, `🔄 ${p.name} tauscht ${cardLabel(cards[0])} gegen den Joker – der Joker muss in diesem Zug wieder angelegt werden.`);
+        return null;
+      }
       log(s, `${p.name} legt ${cards.map(cardLabel).join(' ')} an.`);
       if (!p.hand.length) endRound(s, seat);
       return null;
@@ -468,6 +503,8 @@
     if (a.type === 'discard') {
       const c = p.hand.find((h) => h.id === a.cardId);
       if (!c) return 'Karte nicht auf der Hand';
+      const owed = p.hand.filter((h) => (s.mustPlay || []).includes(h.id));
+      if (owed.length && owed.some((j) => canLayOffAny(s, j, seat))) return 'Den eingetauschten Joker musst du erst wieder anlegen – an eine beliebige Kombination.';
       removeFromHand(p, [c]);
       s.discard.push(c);
       s.discardBy = seat;
@@ -498,6 +535,7 @@
       stockCount: s.stock.length,
       reshuffles: s.reshuffles,
       lastDrawn: seat === s.current ? s.lastDrawn : null,
+      mustPlay: seat === s.current ? (s.mustPlay || []).slice() : [],
       ownLocked: seat != null && s.players[seat] ? (s.players[seat].down && s.players[seat].downTurn === s.turn) : false,
       knock: {
         responses: Object.assign({}, s.knock.responses),
@@ -565,7 +603,7 @@
         const arr = by[r];
         const t = Math.min(arr.length, slot.min);
         const need = slot.min - t;
-        if (need <= jokers.length) out.push({ cards: arr.slice(0, t).concat(jokers.slice(0, need)), cost: need, val: +r });
+        if (need <= jokers.length && t > need) out.push({ cards: arr.slice(0, t).concat(jokers.slice(0, need)), cost: need, val: +r });
       }
     } else {
       const span = slot.min;
@@ -580,7 +618,7 @@
               (slot.t === 'S' ? x.suit === v.su : (isRed(x) ? 1 : 0) === (p + v.par) % 2));
             if (c) chosen.push(c); else missing++;
           }
-          if (missing <= jokers.length && chosen.length) out.push({ cards: chosen.concat(jokers.slice(0, missing)), cost: missing, val: lo });
+          if (missing <= jokers.length && chosen.length > missing) out.push({ cards: chosen.concat(jokers.slice(0, missing)), cost: missing, val: lo });
         }
       }
     }
@@ -654,7 +692,7 @@
   function canLayOffAny(s, c, seat) {
     const p = seat != null ? s.players[seat] : null;
     const locked = p && p.downTurn === s.turn;
-    return s.melds.find((m) => !(locked && m.owner === seat) && validMeld(m.cards.concat([c]), m.t));
+    return s.melds.find((m) => !(locked && m.owner === seat) && layOffResult(m, [c]));
   }
 
   // Will der Bot um die offene Karte klopfen?
@@ -713,7 +751,8 @@
         const f = findContract(p.hand, R, R.fromHand);
         if (f && (!R.fromHand || f.left.length <= 1)) return { type: 'layDown', melds: f.melds.map((m) => m.cards.map((c) => c.id)) };
       } else {
-        for (const c of p.hand) {
+        const owedFirst = p.hand.slice().sort((a, b) => ((s.mustPlay || []).includes(b.id) ? 1 : 0) - ((s.mustPlay || []).includes(a.id) ? 1 : 0));
+        for (const c of owedFirst) {
           const m = canLayOffAny(s, c, seat);
           if (m) return { type: 'layOff', cardIds: [c.id], meldId: m.id };
         }
@@ -728,6 +767,59 @@
         if (key < bestKey) { bestKey = key; best = c; }
       }
       return { type: 'discard', cardId: (best || p.hand[0]).id };
+    }
+    return null;
+  }
+
+  // ---------- Tipp-Modus: Vorschlag für den eigenen Zug (aus der Spielersicht berechnet) ----------
+  function suggest(v) {
+    const seat = v.seat, R = v.roundInfo;
+    if (seat == null || !v.players[seat]) return null;
+    const players = v.players.map((p, i) => ({ name: p.name, hand: i === seat ? v.hand.slice() : [], down: p.down, downTurn: i === seat && v.ownLocked ? 0 : -1 }));
+    const s = {
+      round: v.round, phase: v.phase, current: v.current, players, turn: 0,
+      discard: v.discardTop ? [v.discardTop] : [], discardBy: v.discardBy, stock: new Array(v.stockCount || 0), reshuffles: v.reshuffles,
+      melds: v.melds, taken: {}, lastDrawn: v.lastDrawn, lastTaken: null, mustPlay: v.mustPlay || [],
+      knock: { responses: Object.assign({}, v.knock.responses), order: [], deadline: 0 }, opts: {},
+    };
+    const me = players[seat], top = v.discardTop, L = (c) => cardLabel(c);
+    if (v.phase === 'knock') {
+      if (!(v.knock.pending || []).includes(seat)) return null;
+      return botWantsKnock(s, seat)
+        ? { text: `Klopfen lohnt sich – ${L(top)} bringt dich deiner Vorgabe näher.`, ids: [] }
+        : { text: `Lieber passen – ${L(top)} hilft dir kaum, und die Strafkarte kostet Punkte.`, ids: [] };
+    }
+    if (v.current !== seat) return null;
+    if (v.phase === 'draw') {
+      const a = botAction(s, seat) || { type: 'drawStock' };
+      const take = a.type === 'takeDiscard';
+      if (v.knock.first != null) {
+        return take ? { text: `👎 ablehnen und ${L(top)} selbst von der Ablage nehmen – die Karte passt zu dir.`, ids: [] }
+          : { text: `👍 zustimmen – ${L(top)} brauchst du nicht.`, ids: [] };
+      }
+      return take ? { text: `Nimm ${L(top)} von der Ablage – sie passt zu deinen Karten.`, ids: [], act: 'takeDiscard' }
+        : { text: top ? `Zieh vom Stapel – ${L(top)} bringt dir wenig.` : 'Zieh vom Stapel.', ids: [], act: 'drawStock' };
+    }
+    if (v.phase !== 'play') return null;
+    const a = botAction(s, seat);
+    if (!a) return null;
+    if (a.type === 'layDown') {
+      return { text: R.fromHand ? 'Du kannst ausmachen! Vorschlag in die Sammelstapel legen?' : 'Du kannst die Vorgabe auslegen! Vorschlag in die Sammelstapel legen?', ids: [].concat(...a.melds), melds: a.melds };
+    }
+    if (a.type === 'layOff') {
+      const c = me.hand.find((x) => x.id === a.cardIds[0]);
+      const m = v.melds.find((x) => x.id === a.meldId);
+      const swap = m && layOffResult(m, [c]).joker;
+      return { text: swap ? `${L(c)} ersetzt einen Joker in der markierten Kombination – du bekommst den Joker zurück.` : `${L(c)} passt an die markierte Kombination.`, ids: [c.id], meldId: a.meldId };
+    }
+    if (a.type === 'discard') {
+      const c = me.hand.find((x) => x.id === a.cardId);
+      if (!c) return null;
+      if (!me.down) {
+        const near = progress(me.hand.filter((x) => x !== c), R);
+        return { text: `Wirf ${L(c)} ab${near < 20 ? ' – dir fehlt nicht mehr viel' : ''}.`, ids: [c.id] };
+      }
+      return { text: `Nichts mehr anzulegen – wirf ${L(c)} ab (${cardPoints(c)} Punkte weniger auf der Hand).`, ids: [c.id] };
     }
     return null;
   }
@@ -812,6 +904,6 @@
 
   return {
     SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, isRed, rankLabel, cardLabel, cardPoints, handPoints,
-    validMeld, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock,
+    validMeld, layOffResult, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock,
   };
 });
