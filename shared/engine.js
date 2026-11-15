@@ -641,11 +641,10 @@
     return s.melds.find((m) => !(locked && m.owner === seat) && validMeld(m.cards.concat([c]), m.t));
   }
 
-  function botAction(s, seat) {
+  // Will der Bot um die offene Karte klopfen?
+  function botWantsKnock(s, seat) {
     const R = ROUNDS[s.round];
     const p = s.players[seat];
-    if (s.phase === 'knock') {
-      if (!knockPending(s).includes(seat)) return null;
       const c = s.discard[s.discard.length - 1];
       let want = false;
       // In "aus der Hand"-Runden macht jede Strafkarte das Ausmachen schwerer
@@ -660,7 +659,15 @@
           if (u >= 6) want = true;
         }
       }
-      return { type: want ? 'knock' : 'pass' };
+      return want;
+  }
+
+  function botAction(s, seat) {
+    const R = ROUNDS[s.round];
+    const p = s.players[seat];
+    if (s.phase === 'knock') {
+      if (!knockPending(s).includes(seat)) return null;
+      return { type: botWantsKnock(s, seat) ? 'knock' : 'pass' };
     }
     if (seat !== s.current) return null;
     if (s.phase === 'draw') {
@@ -748,6 +755,17 @@
         const ms = Math.max(0, s.knock.deadline - Date.now());
         this._later(ms + 50, () => { if (s.seq === seq && s.phase === 'knock') this.act(null, { type: 'knockTimeout' }); });
         return;
+      }
+      if (s.phase === 'draw' && !this.isAuto(s.current) && !s.knock.order.length) {
+        // Bots klopfen, solange der Mensch am Zug noch überlegt – dann wird er gefragt (genehmigen / selbst nehmen)
+        const cands = s.players.map((_, i) => i).filter((i) => i !== s.current && this.isAuto(i) && canKnock(s, i) && s.knock.responses[i] === undefined);
+        for (const i of cands) {
+          if (!botWantsKnock(s, i)) continue;
+          this._later(1200 + Math.random() * 1600, () => {
+            if (s.seq !== seq || s.phase !== 'draw' || (s.knock.order || []).length) return;
+            if (!act(s, i, { type: 'knock' })) { this.opts.onChange(); this._tick(); }
+          });
+        }
       }
       if ((s.phase === 'draw' || s.phase === 'play') && this.isAuto(s.current)) {
         const delay = s.phase === 'draw' ? this.opts.botDelay * 1.2 : this.opts.botDelay;
