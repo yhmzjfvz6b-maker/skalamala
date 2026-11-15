@@ -773,3 +773,62 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   .dockmain .actions .btn { min-height: 36px; font-size: .85rem; padding: .3em .7em; }
   .side .tablezone { flex: none; max-height: 18vh !important; padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
 }
+
+/* =====================================================================
+   Kartendesign v3 – passend zum Logo (Buchstaben-Kärtchen):
+   weiße Karte, dicker dunkelblauer Rand, feiner farbiger Innenrahmen,
+   kräftige Werte in Rot/Schwarz. Kein schräger Schwung mehr.
+   ===================================================================== */
+.card { --fr: #9aa7c7; --ink-c: #18181b; }
+.card.s-S { --fr: #3fa9ff; }
+.card.s-C { --fr: #2bb24c; }
+.card.s-H { --fr: #ff5a5f; }
+.card.s-D { --fr: #ffa21f; }
+.card.red { --ink-c: #e3262b; }
+.card, .card.card:not(.joker):not(.empty) {
+  background: radial-gradient(circle at 50% 54%, color-mix(in srgb, var(--fr) 14%, #fff) 0 34%, #fff 35%), #fff;
+  border: calc(var(--cw) * .05 + 1px) solid #0a1e66;
+  box-shadow: 0 4px 0 rgba(10,30,102,.45), 0 8px 14px rgba(0,0,0,.28);
+}
+.card::before {
+  content: ''; position: absolute; inset: 6%; border-radius: calc(var(--cw) * .08);
+  border: max(2px, calc(var(--cw) * .025)) solid var(--fr);
+  background: none; transform: none; box-shadow: none;
+}
+.card::after { display: none !important; }
+.card .ci, .meld .card .ci, .staged .card .ci, .spcards .card .ci, .res .card .ci {
+  color: var(--ink-c); text-shadow: none;
+}
+.card .ci { top: 7%; left: 10%; }
+.card .ci.br { bottom: 7%; right: 10%; }
+.card .ci b { font-family: 'Inter', var(--display); font-weight: 900; font-size: calc(var(--cw) * .34); letter-spacing: -.04em; }
+.card .ci i { font-size: calc(var(--cw) * .2); }
+.card .cs { color: var(--ink-c) !important; font-size: calc(var(--cw) * .6); padding-top: 4%; filter: none; }
+/* kleine Karten */
+.meld .card .ci b, .spcards .card .ci b, .staged .card .ci b { font-size: calc(var(--cw) * .36); }
+.meld .card, .staged .card, .spcards .card, .res .card { border-width: 2px; box-shadow: -1px 0 3px rgba(0,0,0,.2); }
+.meld .card::before, .staged .card::before, .spcards .card::before, .res .card::before { inset: 5%; border-width: 1.5px; }
+/* Joker: weiß mit buntem Innenrahmen und Narrenkappe */
+.card.joker {
+  background: radial-gradient(circle at 50% 46%, #fff6c4 0 34%, #fff 35%), #fff !important;
+  --ink-c: #e3262b;
+}
+.card.joker::before {
+  border: none; padding: max(2px, calc(var(--cw) * .03));
+  background: conic-gradient(#2bb24c, #ffd23f, #ff9417, #e5262f, #8e44d9, #3fa9ff, #2bb24c);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.card.joker .jk em { color: #0a1e66; text-shadow: none; font-family: 'Inter', var(--display); font-weight: 900; }
+.card.joker .ci b { color: #ff9417; }
+.card.joker .rep { color: #8e44d9; text-shadow: none; }
+/* Feinschliff Kartendesign v3 */
+.card, .card.card:not(.joker):not(.empty) { border-width: calc(var(--cw) * .035 + 1px); }
+.card .cs { font-size: calc(var(--cw) * .46); padding-top: 2%; }
+.card .ci b { font-size: calc(var(--cw) * .3); }
+.card .ci i { font-size: calc(var(--cw) * .18); }
+.card .ci { top: 8%; left: 11%; }
+.card .ci.br { bottom: 8%; right: 11%; }
+.meld .card .cs, .staged .card .cs, .spcards .card .cs { font-size: calc(var(--cw) * .42); padding: 36% 0 0 32%; }
+.meld .card .ci b, .spcards .card .ci b, .staged .card .ci b { font-size: calc(var(--cw) * .32); }
+.meld .card .ci, .spcards .card .ci, .staged .card .ci { left: 9%; top: 6%; }
