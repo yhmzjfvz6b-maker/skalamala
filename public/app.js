@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.33 · 15.11.2026';
+  const VERSION = '1.34 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -312,8 +312,9 @@
         <div class="field">
           <label>Sprache</label>
           <div class="modesel" data-nok>
-            <button class="btn small ${ui.lang !== 'ksh' ? 'on' : ''}" data-a="langDe">Hochdeutsch</button>
+            <button class="btn small ${ui.lang === 'de' ? 'on' : ''}" data-a="langDe">Deutsch</button>
             <button class="btn small ${ui.lang === 'ksh' ? 'on' : ''}" data-a="langKsh">Op Kölsch 🍺</button>
+            <button class="btn small ${ui.lang === 'en' ? 'on' : ''}" data-a="langEn">English</button>
           </div>
         </div>
         <div class="field">
@@ -388,7 +389,7 @@
           ${r.seats.map((s, i) => `
             <li>
               ${avatar(s.name, i, { off: !s.connected })}
-              <span class="nm">${esc(s.name)}${i === r.you ? ' (du)' : ''}</span>
+              <span class="nm">${esc(s.name)}</span>${i === r.you ? ' (du)' : ''}
               ${i === r.host ? '<span class="badge gold">Gastgeber</span>' : ''}
               ${s.bot ? '<span class="badge">Bot</span>' : ''}
               ${isHost && i !== r.you ? `<button class="btn small" data-a="kick" data-seat="${i}" aria-label="entfernen">✕</button>` : ''}
@@ -661,7 +662,15 @@
   window.addEventListener('resize', layoutHand);
 
   // ---------- Dialoge ----------
+  // Sprache: Übersetzung der Anzeige + englische Kartenwerte (J/Q statt B/D)
+  function applyLang() {
+    if (E.RANK_LABEL) Object.assign(E.RANK_LABEL, ui.lang === 'en' ? { 11: 'J', 12: 'Q' } : { 11: 'B', 12: 'D' });
+    ui.tipKey = null;
+    if (window.I18n) window.I18n.setLang(ui.lang);
+  }
+
   function rulesHTML() {
+    if (ui.lang === 'en') return rulesHTML_EN();
     return `<button class="btn small ghost close" data-close>Schließen</button>
       <h2>Spielregeln</h2>
       <p>Gespielt wird mit 2 Blättern à 55 Karten (je 52 + 3 Joker = 110 Karten), ab 2 Spielern. Jeder bekommt 11 Karten, der Rest liegt verdeckt als Stapel in der Mitte, eine Karte wird aufgedeckt.</p>
@@ -694,6 +703,42 @@
       <h3>Punkte</h3>
       <p>Wer zuerst keine Karten mehr hat, macht aus. Alle anderen zählen ihre Handkarten: 2–9 = 5, 10 bis König = 10, Ass = 20, Joker = 50 Punkte. Nach 8 Runden gewinnt, wer <b>die wenigsten Punkte</b> hat.</p>
       <p class="hint">Ist der Stapel leer, wird die Ablage einmal neu gemischt. Ist er ein zweites Mal leer, endet die Runde und alle zählen ihre Handkarten.</p>`;
+  }
+  function rulesHTML_EN() {
+    const RT = ['1 group + 1 run', '3 groups', '2 runs', '2 groups of 5', 'Skalamala', '5 groups of 2', '2 groups + 1 run', '1 group + 2 runs'];
+    const RD = ['group (3 cards) and run (4 cards)', '3 groups of 3 cards', '2 runs, at least 4 cards', '2 groups of 5 cards', '10-card run alternating red – black', '5 pairs – NO KNOCKING!', 'go out from your hand', 'go out from your hand – finale!'];
+    return `<button class="btn small ghost close" data-close>Close</button>
+      <h2>Rules</h2>
+      <p>Played with 2 decks of 55 cards each (52 + 3 jokers = 110 cards), 2 or more players. Everyone gets 11 cards, the rest is placed face down as the stock, one card is turned up.</p>
+      <h3>A turn</h3>
+      <ol>
+        <li><b>Draw:</b> the top card of the discard pile or a face-down card from the stock.</li>
+        <li><b>Meld:</b> if you hold the round's contract, lay it down. After that you may lay off cards on all melds on the table (also in the same turn).</li>
+        <li><b>Discard:</b> one card onto the discard pile – then it's the next player's turn (clockwise).</li>
+      </ol>
+      <h3>Knocking 👊</h3>
+      <p>Before the player whose turn it is draws from the stock, the others may knock for the face-up card. <b>Whoever knocks first</b> gets the card – but the player on turn always has priority: they can approve (👍) or reject (👎 – then nobody gets the card and there is no penalty card; they simply draw from the discard pile or the stock). Without an answer it is approved automatically after a few seconds. If they draw from the stock, the first knocker gets the card <b>plus a face-down penalty card</b>. No knocking in round 6.</p>
+      <h3>Controls</h3>
+      <p><b>Tap</b> cards to select them. <b>Drag</b> cards to put them in your preferred order („Suit“ or „Rank“ sorts automatically). Dragging a card onto the discard pile discards it, dragging it onto a meld lays it off.</p>
+      <p><b>Double-click</b> a card to move it into a collect pile, double-click in the collect pile to take it back.</p>
+      <p><b>Collect piles:</b> drag cards onto the ＋ (or select them and tap „＋ Collect pile“) to collect e.g. three of a kind or a run with a joker. A green tick shows the pile is valid. When your piles meet the round's contract, „Meld“ appears.</p>
+      <h3>Combinations</h3>
+      <ul>
+        <li><b>Group:</b> cards of the same rank, e.g. three 10s (suits don't matter).</li>
+        <li><b>Run:</b> at least 4 consecutive cards of the same suit, e.g. ♠10 J Q K. The ace counts high (Q-K-A) or low (A-2-3) – wrapping around is allowed too (K-A-2).</li>
+        <li><b>Skalamala:</b> 10-card run alternating red – black (2 red, 3 black, 4 red …).</li>
+        <li><b>Jokers</b> replace any card – but every meld needs at least <b>one more real card</b> than jokers (2 cards + 1 joker, 3 cards + 2 jokers …).</li>
+        <li><b>Swapping a joker:</b> after your first meld you may place the matching real card on a joker's spot. The joker goes to your hand and must be laid off again on any meld in the same turn.</li>
+        <li>For your <b>first meld</b> you lay down <b>exactly the contract</b> – e.g. in round 1 exactly a group of 3 cards and a run of 4 cards. If it says „at least“, the meld may be longer.</li>
+        <li>In the same turn you may then only lay off on <b>opponents'</b> melds. On your <b>own</b> melds from your next turn.</li>
+      </ul>
+      <h3>The 8 rounds</h3>
+      <ol>${RT.map((t, i) => `<li><b>${t}</b> – ${RD[i]}</li>`).join('')}</ol>
+      <p>At the end of a round <b>every player presses „Next“</b> – when everyone is ready, the next round begins.</p>
+      <p>In rounds 7 and 8 you must <b>go out from your hand</b>: lay down all cards at once (at most one card is left to discard).</p>
+      <h3>Points</h3>
+      <p>Whoever runs out of cards first goes out. Everyone else counts their hand: 2–9 = 5, 10 to King = 10, Ace = 20, Joker = 50 points. After 8 rounds, the player with <b>the fewest points</b> wins.</p>
+      <p class="hint">If the stock runs out, the discard pile is reshuffled once. If it runs out a second time, the round ends and everyone counts their hand.</p>`;
   }
   function scoresHTML(v) {
     const best = Math.min(...v.players.map((p) => p.total));
@@ -982,9 +1027,9 @@
       case 'kick': return ui.ctl.send({ t: 'kick', seat: +el.dataset.seat });
       case 'start': return ui.ctl.send({ t: 'start' });
       case 'roomTips': return ui.ctl.send({ t: 'tips', on: el.dataset.v === '1' });
-      case 'langDe': case 'langKsh': {
-        ui.lang = a === 'langKsh' ? 'ksh' : 'de'; store.set('lang', ui.lang);
-        if (window.Koelsch) window.Koelsch.enable(ui.lang === 'ksh');
+      case 'langDe': case 'langKsh': case 'langEn': {
+        ui.lang = a === 'langKsh' ? 'ksh' : a === 'langEn' ? 'en' : 'de'; store.set('lang', ui.lang);
+        applyLang();
         if (ui.modalKind || document.querySelector('.modal')) closeModal();
         return render();
       }
@@ -1006,7 +1051,7 @@
       case 'menu':
         return openModal(`<button class="btn small ghost close" data-close>Schließen</button><h2>Menü</h2>
           <label class="toggle"><input type="checkbox" id="kp2" ${ui.knockPrompt ? 'checked' : ''}> Bei fremden Zügen fragen, ob ich klopfen will</label>
-          <div class="row" style="margin-top:10px"><span>Sprache</span><div class="modesel" data-nok><button class="btn small ${ui.lang !== 'ksh' ? 'on' : ''}" data-a="langDe">Hochdeutsch</button><button class="btn small ${ui.lang === 'ksh' ? 'on' : ''}" data-a="langKsh">Op Kölsch 🍺</button></div></div>
+          <div class="row" style="margin-top:10px"><span>Sprache</span><div class="modesel" data-nok><button class="btn small ${ui.lang === 'de' ? 'on' : ''}" data-a="langDe">Deutsch</button><button class="btn small ${ui.lang === 'ksh' ? 'on' : ''}" data-a="langKsh">Kölsch</button><button class="btn small ${ui.lang === 'en' ? 'on' : ''}" data-a="langEn">English</button></div></div>
           <div class="row" style="margin-top:14px"><button class="btn small" data-a="rules">📜 Spielregeln</button></div>
           <h3>Verlauf</h3><ul class="loglist">${v.log.slice().reverse().map((l) => `<li>${esc(l.msg)}</li>`).join('')}</ul>
           <div class="divider"></div><button class="btn danger" data-a="leave">Spiel verlassen</button><p class="hint">Version ${VERSION}</p>`, (e) => {
@@ -1066,7 +1111,7 @@
 
   window.__skalamala = ui; // für Tests
   // ---------- Start ----------
-  if (window.Koelsch && ui.lang === 'ksh') window.Koelsch.enable(true);
+  applyLang();
   render();
   if (/^https?:$/.test(location.protocol)) {
     fetch('api/ping', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {

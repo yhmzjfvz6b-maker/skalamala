@@ -903,7 +903,7 @@
   }
 
   return {
-    SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, isRed, rankLabel, cardLabel, cardPoints, handPoints,
+    SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, RANK_LABEL, isRed, rankLabel, cardLabel, cardPoints, handPoints,
     validMeld, layOffResult, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock,
   };
 });

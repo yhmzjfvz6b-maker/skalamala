@@ -3,8 +3,9 @@
   'use strict';
 
   // Ganze Sätze und Wendungen zuerst (Reihenfolge zählt)
-  const PHRASES = [
+  const KSH_PHRASES = [
     [/Los geht's/g, 'Loss jon!'],
+    [/ – (.+?) gibt, (.+?) beginnt\./g, ' – $1 jitt, $2 fängk aan.'],
     [/Bitte zuerst deinen Namen eingeben\./g, 'Bes esu jot un jif zoeets dinge Name en.'],
     [/Bitte erst eine Karte nehmen – vom Stapel oder von der Ablage\./g, 'Eets ens en Kaat nemme – vum Stapel oder vun dr Ablach.'],
     [/Du bist noch nicht dran\./g, 'Do bes noch nit dran.'],
@@ -74,7 +75,7 @@
   ];
 
   // Einzelne Wörter (kleingeschrieben; Großschreibung wird übernommen)
-  const WORDS = {
+  const KSH_WORDS = {
     ist: 'es', nicht: 'nit', nichts: 'nix', das: 'dat', dass: 'dat', was: 'wat', es: 'et', auch: 'och', aus: 'us', auf: 'op',
     kein: 'kei', keine: 'kein', keinen: 'keine', niemand: 'keiner', jemand: 'einer', du: 'do', bist: 'bes', hast: 'häs',
     hat: 'hät', haben: 'han', kannst: 'kanns', musst: 'muss', darfst: 'darfs', wird: 'weed', werden: 'wääde', sind: 'sin',
@@ -125,18 +126,175 @@
     drückt: 'dröck', beginnt: 'fängk aan', gültig: 'jöltich', grüner: 'jröne', haken: 'Hoke', zeigen: 'zeije',
     finale: 'Finale', vorbei: 'vörbei', sofort: 'sofott', immer: 'immer', ganz: 'janz', normal: 'normal',
   };
-  const WORD_RE = /[A-Za-zÄÖÜäöüß]+/g;
-  function tword(w) {
+
+  // ---------- English ----------
+  const N = '(.+?)', C = '(\\S+)';
+  const EN_PHRASES = [
+    // Spielverlauf (Server/Engine)
+    [/Der Stapel ist leer – die Ablage wird neu gemischt \(letztes Mal in dieser Runde\)\./g, 'The stock is empty – the discard pile is reshuffled (last time this round).'],
+    [new RegExp('👊 ' + N + ' klopft und nimmt ' + C + ' \\+ 1 verdeckte Karte\\.', 'g'), '👊 $1 knocks and takes $2 + 1 face-down card.'],
+    [new RegExp('👊 ' + N + ' klopft als Erste\\(r\\)!', 'g'), '👊 $1 knocks first!'],
+    [new RegExp('👊 ' + N + ' klopft – zu spät\\.', 'g'), '👊 $1 knocks – too late.'],
+    [new RegExp('👎 ' + N + ' lehnt das Klopfen ab\\.', 'g'), '👎 $1 rejects the knock.'],
+    [new RegExp('🔄 ' + N + ' tauscht ' + C + ' gegen den Joker – der Joker muss in diesem Zug wieder angelegt werden\\.', 'g'), '🔄 $1 swaps $2 for the joker – the joker must be laid off again this turn.'],
+    [new RegExp('🎉 ' + N + ' macht aus!', 'g'), '🎉 $1 goes out!'],
+    [new RegExp(N + ' nimmt ' + C + ' von der Ablage\\.', 'g'), '$1 takes $2 from the discard pile.'],
+    [new RegExp(N + ' zieht vom Stapel\\.', 'g'), '$1 draws from the stock.'],
+    [new RegExp(N + ' wirft ' + C + ' ab\\.', 'g'), '$1 discards $2.'],
+    [new RegExp(N + ' legt aus:', 'g'), '$1 melds:'],
+    [new RegExp(N + ' legt ' + N + ' an\\.', 'g'), '$1 lays off $2.'],
+    [/Der Stapel ist aufgebraucht – Runde beendet, alle zählen ihre Handkarten\./g, 'The stock is used up – round over, everyone counts their hand.'],
+    [/Der Stapel ist aufgebraucht\./g, 'The stock is used up.'],
+    // Fehlermeldungen
+    [/In dieser Runde werden genau (\d+) Kombinationen? ausgelegt: (.+?)\. Weitere Karten danach anlegen\./g, 'This round you meld exactly $1 combination(s): $2. Lay off further cards afterwards.'],
+    [/Beim Auslegen genau die Vorgabe: (.+?)\. Weitere Karten danach anlegen – bei Gegenspielern sofort, bei dir erst im nächsten Zug\./g, 'Meld exactly the contract: $1. Lay off further cards afterwards – on opponents right away, on your own melds from your next turn.'],
+    [/In dieser Runde muss komplett aus der Hand ausgemacht werden \(höchstens 1 Karte zum Abwerfen übrig\)\./g, 'This round you must go out entirely from your hand (at most 1 card left to discard).'],
+    [/An deine eigenen Kombinationen darfst du erst ab deinem nächsten Zug anlegen – an die der Gegenspieler sofort\./g, 'You can lay off on your own melds from your next turn – on opponents\' melds right away.'],
+    [/An deine eigenen Kombinationen erst ab deinem nächsten Zug anlegen\./g, 'You can lay off on your own melds from your next turn.'],
+    [/Zu viele Joker: In jeder Kombination muss mindestens eine echte Karte mehr liegen als Joker\./g, 'Too many jokers: every meld needs at least one more real card than jokers.'],
+    [/Den eingetauschten Joker musst du erst wieder anlegen – an eine beliebige Kombination\./g, 'You must first lay off the swapped joker – on any meld.'],
+    [/Erst die Vorgabe auslegen, dann anlegen\.?/g, 'Meld the contract first, then lay off.'],
+    [/Passt nicht an diese Kombination/g, 'Doesn\'t fit this meld'],
+    [/Kombination nicht gefunden/g, 'Meld not found'],
+    [/Karten? nicht auf der Hand/g, 'Card not in your hand'],
+    [/Ungültige Aktion/g, 'Invalid action'], [/Unbekannte Aktion/g, 'Unknown action'],
+    [/Runde läuft noch/g, 'Round still in progress'], [/Kein Klopfen offen/g, 'No knock pending'],
+    [/Ungültiger Spieler/g, 'Invalid player'], [/Klopfen ist gerade nicht möglich/g, 'You can\'t knock right now'],
+    [/Nichts zu passen/g, 'Nothing to pass'], [/Du hast schon entschieden/g, 'You have already decided'],
+    [/Du bist nicht dran/g, 'It\'s not your turn'], [/Die Ablage ist leer/g, 'The discard pile is empty'],
+    [/Niemand hat geklopft/g, 'Nobody knocked'], [/Zuerst eine Karte ziehen/g, 'Draw a card first'],
+    [/Gerade nicht möglich/g, 'Not possible right now'], [/Du hast schon ausgelegt/g, 'You have already melded'],
+    [/Du hast dich auf einem anderen Gerät angemeldet\./g, 'You signed in on another device.'],
+    [/Du bist schon in einem Raum\./g, 'You are already in a room.'],
+    [/Raum nicht gefunden\. Code prüfen!/g, 'Room not found. Check the code!'],
+    [new RegExp('Der ' + N + ' ist nur für ' + N + '\\. Bitte deinen Namen genau so eingeben\\.', 'g'), '$1 is only for $2. Please enter your name exactly like that.'],
+    [new RegExp('Der ' + N + ' ist nur für ' + N + ' – bitte oben deinen Namen genau so eingeben\\.', 'g'), '$1 is only for $2 – please enter your name exactly like that above.'],
+    [/Das Spiel in diesem Raum läuft bereits\./g, 'The game in this room has already started.'],
+    [/Der Raum ist voll\./g, 'The room is full.'],
+    [/Mindestens 2 Spieler \(oder Bots\) nötig\./g, 'At least 2 players (or bots) needed.'],
+    [/Keine Verbindung zum Server möglich\./g, 'Can\'t connect to the server.'],
+    [/Du wurdest aus dem Raum entfernt\./g, 'You were removed from the room.'],
+    [/Verbindung unterbrochen – verbinde neu…/g, 'Connection lost – reconnecting…'],
+    [/Nicht verbunden\./g, 'Not connected.'],
+    [/Bitte zuerst deinen Namen eingeben\./g, 'Please enter your name first.'],
+    [/Bitte erst eine Karte nehmen – vom Stapel oder von der Ablage\./g, 'Please take a card first – from the stock or the discard pile.'],
+    [/Du bist noch nicht dran\./g, 'It\'s not your turn yet.'],
+    [/Wähle zuerst Karten aus deiner Hand\./g, 'Select cards from your hand first.'],
+    [/Wähle genau eine Karte zum Abwerfen\./g, 'Select exactly one card to discard.'],
+    [/Karten antippen und dann „＋ Sammelstapel“ – oder Karten auf das ＋ ziehen\./g, 'Tap cards, then „＋ Collect pile“ – or drag cards onto the ＋.'],
+    [/Deine Sammelstapel erfüllen die Vorgabe noch nicht: /g, 'Your collect piles don\'t meet the contract yet: '],
+    [/Der Raumcode hat 4 Buchstaben\./g, 'The room code has 4 letters.'],
+    [/Link kopiert – jetzt an deine Mitspieler schicken!/g, 'Link copied – now send it to your friends!'],
+    // Tipps
+    [new RegExp('Klopfen lohnt sich – ' + C + ' bringt dich deiner Vorgabe näher\\.', 'g'), 'Knocking pays off – $1 brings you closer to the contract.'],
+    [new RegExp('Lieber passen – ' + C + ' hilft dir kaum, und die Strafkarte kostet Punkte\\.', 'g'), 'Better pass – $1 barely helps and the penalty card costs points.'],
+    [new RegExp('👎 ablehnen und ' + C + ' selbst von der Ablage nehmen – die Karte passt zu dir\\.', 'g'), '👎 reject and take $1 from the discard pile yourself – it suits you.'],
+    [new RegExp('👍 zustimmen – ' + C + ' brauchst du nicht\\.', 'g'), '👍 approve – you don\'t need $1.'],
+    [new RegExp('Nimm ' + C + ' von der Ablage – sie passt zu deinen Karten\\.', 'g'), 'Take $1 from the discard pile – it fits your cards.'],
+    [new RegExp('Zieh vom Stapel – ' + C + ' bringt dir wenig\\.', 'g'), 'Draw from the stock – $1 is of little use to you.'],
+    [/Zieh vom Stapel\./g, 'Draw from the stock.'],
+    [/Du kannst ausmachen! Vorschlag in die Sammelstapel legen\?/g, 'You can go out! Put the suggestion into collect piles?'],
+    [/Du kannst die Vorgabe auslegen! Vorschlag in die Sammelstapel legen\?/g, 'You can meld the contract! Put the suggestion into collect piles?'],
+    [new RegExp(C + ' ersetzt einen Joker in der markierten Kombination – du bekommst den Joker zurück\\.', 'g'), '$1 replaces a joker in the highlighted meld – you get the joker back.'],
+    [new RegExp(C + ' passt an die markierte Kombination\\.', 'g'), '$1 fits the highlighted meld.'],
+    [new RegExp('Nichts mehr anzulegen – wirf ' + C + ' ab \\((\\d+) Punkte weniger auf der Hand\\)\\.', 'g'), 'Nothing left to lay off – discard $1 ($2 fewer points in hand).'],
+    [new RegExp('Wirf ' + C + ' ab – dir fehlt nicht mehr viel\\.', 'g'), 'Discard $1 – you\'re almost there.'],
+    [new RegExp('Wirf ' + C + ' ab\\.', 'g'), 'Discard $1.'],
+    // Status
+    [/Runde beendet/g, 'Round over'], [/Spiel beendet/g, 'Game over'],
+    [/👊 Klopfen oder passen\?/g, '👊 Knock or pass?'],
+    [/Es darf geklopft werden…/g, 'Players may knock…'],
+    [/Du bist dran – zieh eine Karte \(Stapel oder Ablage\)/g, 'Your turn – draw a card (stock or discard pile)'],
+    [/Ausmachen \(alles aus der Hand\) oder eine Karte abwerfen/g, 'Go out (all from your hand) or discard a card'],
+    [/Genau die Vorgabe auslegen – oder abwerfen/g, 'Meld exactly the contract – or discard'],
+    [/🔄 Joker eingetauscht – lege ihn jetzt an eine beliebige Kombination an/g, '🔄 Joker swapped – now lay it off on any meld'],
+    [/Ausgelegt! Jetzt abwerfen – anlegen nur bei Gegenspielern, bei dir erst im nächsten Zug/g, 'Melded! Now discard – lay off only on opponents\' melds, on your own from your next turn'],
+    [/Anlegen: Karte wählen, dann auf eine Kombination tippen – zum Schluss abwerfen/g, 'Lay off: pick a card, then tap a meld – discard to finish'],
+    [new RegExp(N + ' ist dran \\(zieht\\)…', 'g'), '$1\'s turn (drawing)…'],
+    [new RegExp(N + ' ist dran…', 'g'), '$1\'s turn…'],
+    // Startseite / Lobby
+    [/8 Runden · wer am wenigsten Punkte hat, gewinnt!/g, '8 rounds · fewest points wins!'],
+    [/Dein Name/g, 'Your name'], [/^Sprache$/g, 'Language'], [/^Spielmodus$/g, 'Game mode'],
+    [/Zeigt dir während des Spiels Vorschläge: welche Karte nehmen, auslegen, anlegen oder abwerfen\./g, 'Shows suggestions during the game: which card to take, meld, lay off or discard.'],
+    [/Turnier: ohne Tipps – alle spielen auf eigene Faust\./g, 'Tournament: no tips – everyone is on their own.'],
+    [/Turnier – ohne Tipps/g, 'Tournament – no tips'], [/Mit Tipps/g, 'With tips'], [/Turnier/g, 'Tournament'],
+    [/Gegen Bots/g, 'Against bots'], [/Anzahl Bots/g, 'Number of bots'], [/Los geht's/g, 'Let\'s go!'],
+    [/Bei fremden Zügen fragen, ob ich klopfen will/g, 'Ask me whether to knock on other players\' turns'],
+    [/Online gegen echte Gegner/g, 'Online against real players'],
+    [/Zurück in Raum (\w+)/g, 'Back to room $1'],
+    [new RegExp(N + ' betreten', 'g'), 'Enter $1'],
+    [new RegExp('Fester Raum für ' + N + ' · Code', 'g'), 'Fixed room for $1 · code'],
+    [/Raum erstellen/g, 'Create room'], [/^Beitreten$/g, 'Join'],
+    [/Erstelle einen Raum und schick deinen Mitspielern den 4-stelligen Code oder den Link\. Freie Plätze kannst du mit Bots auffüllen\./g, 'Create a room and send your friends the 4-letter code or the link. Empty seats can be filled with bots.'],
+    [/Für Online-Spiele muss diese Seite über den Skalamala-Server geöffnet werden \(siehe Anleitung in der README\)\. Gegen Bots kannst du sofort spielen\./g, 'For online games this page must be opened via the Skalamala server (see README). You can play against bots right away.'],
+    [/Spielregeln/g, 'Rules'], [/Verbinde…/g, 'Connecting…'], [/^Raumcode$/g, 'Room code'],
+    [/Fehlt noch: /g, 'Still missing: '], [/Alle Mitglieder sind da!/g, 'All members are here!'],
+    [/Einladungslink kopieren/g, 'Copy invite link'], [/\(du\)/g, '(you)'], [/^Gastgeber$/g, 'Host'],
+    [/Spiel starten/g, 'Start game'],
+    [/2–8 Spieler\. Warte, bis alle drin sind, und starte dann\./g, '2–8 players. Wait until everyone has joined, then start.'],
+    [/Warte, bis der Gastgeber das Spiel startet…/g, 'Waiting for the host to start the game…'],
+    [/Raum verlassen/g, 'Leave room'],
+    // Spielfläche
+    [/^Übernehmen$/g, 'Apply'], [/✓ draußen/g, '✓ down'], [/du warst zuerst/g, 'you were first'], [/geklopft 👊/g, 'knocked 👊'],
+    [/👊 Klopfen/g, '👊 Knock'], [/^Gesucht:$/g, 'Needed:'], [/Deine Auslage/g, 'Your melds'],
+    [/Auslage: noch hat niemand ausgelegt\./g, 'Table: nobody has melded yet.'],
+    [/^Vom Stapel$/g, 'From stock'], [/^Ablage nehmen$/g, 'Take discard'], [/🎉 Ausmachen!/g, '🎉 Go out!'], [/✓ Auslegen/g, '✓ Meld'],
+    [/^Abwerfen$/g, 'Discard'], [/Endergebnis/g, 'Final result'], [/Rundenergebnis/g, 'Round result'], [/Neues Spiel/g, 'New game'],
+    [/Sammelstapel – Karten hierher ziehen/g, 'Collect pile – drag cards here'], [/Sammelstapel/g, 'Collect pile'],
+    [/(\d+) Karten · (\d+) Pkt/g, '$1 cards · $2 pts'], [/· ziehen zum Sortieren/g, '· drag to sort'],
+    [/^Farbe$/g, 'Suit'], [/^Wert$/g, 'Rank'], [/(\d+) Pkt/g, '$1 pts'],
+    [/^Stapel \((\d+)\)$/g, 'Pile ($1)'], [/^Stapel$/g, 'Stock'], [/^Ablage( \(\d+\))?$/g, 'Discard$1'],
+    [/: nur (\d+) Karten!/g, ': only $1 cards!'], [/ – noch (\d+)$/g, ' – $1 more'], [/^passt nicht$/g, 'doesn\'t fit'],
+    [/10er-Sequenz abwechselnd rot – schwarz/g, '10-card run alternating red – black'],
+    [/5 Paare – OHNE KLOPFEN!/g, '5 pairs – NO KNOCKING!'],
+    [/aus der Hand ausmachen – Finale!/g, 'go out from your hand – finale!'],
+    [/aus der Hand ausmachen/g, 'go out from your hand'],
+    [/👍 Karte \+ Strafkarte für (.+?) · 👎 du ziehst normal, keine Strafkarte/g, '👍 card + penalty card for $1 · 👎 you draw normally, no penalty'],
+    [new RegExp('^' + N + ' klopft!$', 'g'), '$1 knocks!'], [/^Klopfen\?$/g, 'Knock?'],
+    [new RegExp(N + ' will sie nicht · du bekommst sie', 'g'), '$1 doesn\'t want it · you get it'],
+    [/\+ 1 Strafkarte/g, '+ 1 penalty card'], [/^Passen$/g, 'Pass'],
+    // Rundenende
+    [/^Spieler$/g, 'Player'], [new RegExp('🏆 ' + N + ' gewinnt!', 'g'), '🏆 $1 wins!'], [/^Mit nur$/g, 'With only'],
+    [/(\d+) Punkten/g, '$1 points'], [/nach 8 Runden\./g, 'after 8 rounds.'], [/Runde (\d+) vorbei/g, 'Round $1 over'],
+    [/hat ausgemacht!/g, 'went out!'], [/(\d+) Karte übrig/g, '$1 card left'], [/(\d+) Karten übrig/g, '$1 cards left'],
+    [/Der Gastgeber kann ein neues Spiel starten\./g, 'The host can start a new game.'], [/^Punktestand$/g, 'Scores'],
+    [/Spiel verlassen\?/g, 'Leave game?'], [/Spiel verlassen/g, 'Leave game'], [/Tisch ansehen/g, 'View table'],
+    [/Weiter zu Runde (\d+)/g, 'On to round $1'], [/✓ Bereit – warte auf /g, '✓ Ready – waiting for '], [/✓ Bereit/g, '✓ Ready'],
+    [/Ein Bot spielt für dich weiter\. Mit demselben Namen kannst du später wieder einsteigen\./g, 'A bot keeps playing for you. Rejoin later with the same name.'],
+    [/Das laufende Spiel gegen die Bots wird beendet\./g, 'The current game against the bots will end.'],
+    [/Weiterspielen/g, 'Keep playing'], [/Ja, verlassen/g, 'Yes, leave'], [/Wenigste Punkte gewinnen\./g, 'Fewest points win.'],
+    [/^Menü$/g, 'Menu'], [/^Verlauf$/g, 'History'], [/^Schließen$/g, 'Close'],
+    [/ – (.+?) gibt, (.+?) beginnt\./g, ' – $1 deals, $2 starts.'], [/Runde (\d+):/g, 'Round $1:'], [/^Geber$/g, 'Dealer'],
+    [new RegExp(N + ' legt aus: ', 'g'), '$1 melds: '],
+    // Kartenbezeichnungen in Meldungen: B → J, D → Q
+    [/([♠♥♦♣])B(?![A-Za-z])/g, '$1J'], [/([♠♥♦♣])D(?![A-Za-z])/g, '$1Q'],
+  ];
+  const EN_WORDS = {
+    gruppe: 'group', gruppen: 'groups', sequenz: 'run', sequenzen: 'runs', karten: 'cards', karte: 'card', und: 'and',
+    'à': 'of', paare: 'pairs', mind: 'min', rot: 'red', schwarz: 'black', stapel: 'stock', ablage: 'discard pile',
+    runde: 'round', punkte: 'points', spieler: 'player', ohne: 'without', joker: 'joker', offline: 'offline',
+  };
+
+  const PACKS = { ksh: { phrases: KSH_PHRASES, words: KSH_WORDS }, en: { phrases: EN_PHRASES, words: EN_WORDS } };
+  let pack = PACKS.ksh;
+  const WORD_RE = /[A-Za-zÄÖÜäöüßà]+/g;
+  function tword(w, off, str) {
     if (w.length > 1 && w === w.toUpperCase()) return w; // JOKER, NEU, Raumcodes …
-    const k = WORDS[w.toLowerCase()];
+    const k = pack.words[w.toLowerCase()];
     if (!k) return w;
-    if (w[0] !== w[0].toLowerCase()) return k[0].toUpperCase() + k.slice(1);
+    const first = typeof off !== 'number' || !/[A-Za-zÄÖÜäöüß]/.test(str.slice(0, off));
+    if (w[0] !== w[0].toLowerCase() && (pack !== PACKS.en || first)) return k[0].toUpperCase() + k.slice(1);
     return k;
   }
   function koelsch(s) {
-    if (!s || !/[A-Za-zÄÖÜäöüß]{2}/.test(s)) return s;
+    if (!s || !pack || !/[A-Za-zÄÖÜäöüß]{1}/.test(s)) return s;
+    const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s);
+    return m[1] + core(m[2]) + m[3];
+  }
+  function core(s) {
+    if (!s) return s;
     // Wendungen werden markiert (\u0001…\u0002), damit ihre kölschen Wörter nicht noch einmal ersetzt werden
-    for (const [re, rep] of PHRASES) s = s.replace(re, '\u0001' + rep + '\u0002');
+    for (const [re, rep] of pack.phrases) s = s.replace(re, '\u0001' + rep + '\u0002');
     let out = '', depth = 0, buf = '';
     const flush = () => { out += depth ? buf : buf.replace(WORD_RE, tword); buf = ''; };
     for (const ch of s) {
@@ -184,9 +342,13 @@
     let n;
     while ((n = tw.nextNode())) { if (n.nodeType === 3) doText(n); else doAttrs(n); }
   }
-  function enable(v) {
-    on = !!v;
-    document.documentElement.lang = on ? 'ksh' : 'de';
+  function setLang(lang) {
+    pack = PACKS[lang] || null;
+    enable(!!pack, lang);
+  }
+  function enable(v, lang) {
+    on = !!v && !!pack;
+    document.documentElement.lang = on ? (lang || 'ksh') : 'de';
     if (on) {
       walk(document.body);
       if (!obs) {
@@ -202,5 +364,6 @@
       obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
     } else if (obs) obs.disconnect();
   }
-  window.Koelsch = { enable, translate: koelsch, get on() { return on; } };
+  window.Koelsch = { enable: (v) => setLang(v ? 'ksh' : 'de'), translate: koelsch, get on() { return on; } };
+  window.I18n = { setLang, translate: (t, lang) => { const old = pack; pack = PACKS[lang] || pack; const r = koelsch(t); pack = old; return r; } };
 })();

@@ -89,3 +89,7 @@ In `rooms.json` stehen Räume, die immer bestehen bleiben und nur für die einge
 ```
 
 Auf der Startseite erscheint dafür der Knopf „🎪 Rummel Club betreten“. Man kommt nur mit einem der eingetragenen Namen hinein (Groß-/Kleinschreibung egal). Der Code ist immer derselbe (RUMM). Ist eine halbe Stunde niemand mehr im Raum, wird er geleert, bleibt aber bestehen. Weitere Räume oder Mitglieder einfach in `rooms.json` ergänzen.
+
+## Sprachen
+
+Auf der Startseite (und im Menü ☰) lässt sich die Sprache wählen: **Deutsch**, **Op Kölsch 🍺** oder **English**. Die Wahl gilt nur für das eigene Gerät – online kann jeder in seiner Sprache spielen. Auf Englisch heißen Bube und Dame „J“ und „Q“. Die Übersetzungen stehen in `public/koelsch.js`.
