@@ -926,3 +926,6 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .meld .card.joker .jk, .staged .card.joker .jk, .spcards .card.joker .jk, .res .card.joker .jk { display: none !important; }
 .card .cs { font-size: calc(var(--cw) * .5); padding: 0 10% 6% 0; }
 .knockprompt .card .cs { padding: 0 10% 6% 0; }
+/* 1.24: S-Kärtchen oben rechts, gegenüber der Zahl */
+.stile { top: 6%; bottom: auto; right: 8%; transform: rotate(10deg); }
+.card .cs, .knockprompt .card .cs { font-size: calc(var(--cw) * .54); padding: 22% 0 0 0; }
