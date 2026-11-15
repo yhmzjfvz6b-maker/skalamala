@@ -1007,7 +1007,9 @@
         }
       }
       if ((s.phase === 'draw' || s.phase === 'play') && this.isAuto(s.current)) {
-        const delay = s.phase === 'draw' ? this.opts.botDelay * 1.2 : this.opts.botDelay;
+        let delay = s.phase === 'draw' ? this.opts.botDelay * 1.2 : this.opts.botDelay;
+        // Können Menschen um die offene Karte klopfen, überlegt der Bot länger – damit „Klopfen“ lange genug zu sehen ist
+        if (s.phase === 'draw' && !s.knock.order.length && s.players.some((_, i) => i !== s.current && !this.isAuto(i) && canKnock(s, i))) delay = Math.max(delay, 3500);
         this._later(delay, () => {
           if (s.seq !== seq) return;
           const cur = s.current;

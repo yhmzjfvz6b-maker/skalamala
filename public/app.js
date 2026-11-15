@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.46 · 15.11.2026';
+  const VERSION = '1.47 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -517,7 +517,7 @@
     const canDiscardTap = canPlay && ui.selected.length === 1;
     const myResp = v.knock.responses[me];
     let knockBtn = '';
-    if (v.phase === 'draw' && !myTurn && v.knock.canKnock && v.discardTop) {
+    if ((v.phase === 'draw' || (v.phase === 'knock' && (v.knock.pending.includes(me) || myResp === 'knock'))) && !myTurn && (v.knock.canKnock || myResp) && v.discardTop) {
       knockBtn = myResp === 'knock' ? `<span class="badge gold">${v.knock.first === me ? 'du warst zuerst 👊' : 'geklopft 👊'}</span>`
         : myResp === 'pass' ? '' : `<button class="btn knock small" data-a="knock">👊 Klopfen</button>`;
     }
