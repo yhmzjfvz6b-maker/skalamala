@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, version: '1.29', rooms: rooms.size }));
+    return res.end(JSON.stringify({ ok: true, version: '1.30', rooms: rooms.size }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');

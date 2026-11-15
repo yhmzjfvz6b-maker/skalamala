@@ -1005,3 +1005,11 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .card.s-S .csg b { top: 55%; }
 .card.s-C .csg b { top: 54%; }
 .meld .card .csg b, .staged .card .csg b, .spcards .card .csg b, .res .card .csg b { display: none; }
+/* 1.30: S im Farbsymbol rot wie im Logo, mittig und leicht schräg */
+.card .csg b { color: #e3262b; font-size: .34em; transform: translate(-50%, -50%) rotate(-10deg);
+  -webkit-text-stroke: max(1.5px, .05em) #fff; paint-order: stroke fill; text-shadow: none; }
+.card.s-H .csg b { top: 43%; left: 50%; }
+.card.s-D .csg b { top: 50%; left: 50%; }
+.card.s-S .csg b { top: 50%; left: 50%; }
+.card.s-C .csg b { top: 52%; left: 50%; }
+.card .csg b { -webkit-text-stroke-width: max(1.2px, .035em); }
