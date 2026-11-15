@@ -358,6 +358,8 @@
       if (a.type === 'knock') {
         s.knock.order = s.knock.order || [];
         s.knock.order.push(seat);
+        // Spieler am Zug muss zustimmen (👍), ablehnen (👎) oder selbst nehmen – ohne Antwort wird automatisch zugestimmt
+        if (s.phase === 'draw' && s.knock.order.length === 1) s.knock.approveDeadline = Date.now() + (s.opts.approveMs || 8000);
         log(s, s.knock.order.length === 1 ? `👊 ${p.name} klopft als Erste(r)!` : `👊 ${p.name} klopft – zu spät.`);
       }
       if (s.phase === 'knock' && knockDecided(s)) resolveKnock(s);
@@ -377,6 +379,17 @@
         s.knock = { responses: {}, deadline: 0, order: [] };
         s.phase = 'play';
         log(s, `${p.name} nimmt ${cardLabel(c)} von der Ablage.`);
+        return null;
+      }
+      if (a.type === 'rejectKnock') {
+        if (!(s.knock.order || []).length) return 'Niemand hat geklopft';
+        const c = drawFromStock(s);
+        s.knock = { responses: {}, deadline: 0, order: [] };
+        if (!c) { endRound(s, null); return null; }
+        p.hand.push(c);
+        s.lastDrawn = c.id;
+        s.phase = 'play';
+        log(s, `👎 ${p.name} lehnt das Klopfen ab und zieht vom Stapel.`);
         return null;
       }
       if (a.type === 'drawStock') {
@@ -487,6 +500,7 @@
       knock: {
         responses: Object.assign({}, s.knock.responses),
         first: firstKnocker(s),
+        approveDeadline: s.knock.approveDeadline || 0,
         deadline: s.knock.deadline,
         canKnock: canKnock(s, seat),
         pending: s.phase === 'knock' ? knockPending(s) : [],
@@ -755,6 +769,14 @@
         const ms = Math.max(0, s.knock.deadline - Date.now());
         this._later(ms + 50, () => { if (s.seq === seq && s.phase === 'knock') this.act(null, { type: 'knockTimeout' }); });
         return;
+      }
+      if (s.phase === 'draw' && !this.isAuto(s.current) && s.knock.order.length && s.knock.approveDeadline) {
+        // keine Antwort vom Spieler am Zug → automatisch zustimmen
+        const ms = Math.max(0, s.knock.approveDeadline - Date.now());
+        this._later(ms + 50, () => {
+          if (s.seq !== seq || s.phase !== 'draw') return;
+          if (!act(s, s.current, { type: 'drawStock' })) { this.opts.onChange(); this._tick(); }
+        });
       }
       if (s.phase === 'draw' && !this.isAuto(s.current) && !s.knock.order.length) {
         // Bots klopfen, solange der Mensch am Zug noch überlegt – dann wird er gefragt (genehmigen / selbst nehmen)

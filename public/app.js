@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.20 · 15.11.2026';
+  const VERSION = '1.21 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -271,6 +271,7 @@
       const k = `${v.round}|${v.current}|${v.discardTop && v.discardTop.id}`;
       if (v.knock.pending.includes(v.seat) && !ui.knockPrompt && ui.autoPassed !== k) { ui.autoPassed = k; ui.ctl.act({ type: 'pass' }); }
     }
+    if (v.current === v.seat && v.phase === 'draw' && v.knock.first != null && !(prev && prev.knock && prev.knock.first != null && prev.current === v.current && prev.phase === 'draw')) ui.approveStart = Date.now();
     ui.lastTurnKey = turnKey;
     render();
     // Rundenende
@@ -386,7 +387,7 @@
       return { t: `Es darf geklopft werden…`, mine: false };
     }
     if (v.current === me) {
-      if (v.phase === 'draw' && v.knock.first != null) return { t: `${v.players[v.knock.first].name} klopft – genehmigen oder selbst nehmen?`, mine: true };
+      if (v.phase === 'draw' && v.knock.first != null) return { t: `${v.players[v.knock.first].name} klopft – 👍 oder 👎?`, mine: true };
       if (v.phase === 'draw') return { t: 'Du bist dran – zieh eine Karte (Stapel oder Ablage)', mine: true };
       const p = v.players[me];
       if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Genau die Vorgabe auslegen – oder abwerfen', mine: true };
@@ -557,10 +558,14 @@
     const who = v.players[v.knock.first].name;
     return `<div class="knockprompt approve">
       <h3>${esc(who)} klopft!</h3>
-      <div style="font-size:.95rem">Klopfen genehmigen?</div>
       ${cardHTML(v.discardTop)}
-      <div style="font-size:.86rem">Nickst du, bekommt ${esc(who)} die Karte <b>plus 1 Strafkarte</b> – und du ziehst vom Stapel.</div>
-      <div class="row grow" style="margin-top:14px"><button class="btn white" data-a="takeDiscard">Ich nehme sie selbst</button><button class="btn primary" data-a="drawStock">👍 Genehmigen</button></div>
+      <div class="thumbs">
+        <button class="thumb up" data-a="drawStock" aria-label="Zustimmen" title="Zustimmen: ${esc(who)} bekommt die Karte + 1 Strafkarte">👍</button>
+        <button class="thumb down" data-a="rejectKnock" aria-label="Ablehnen" title="Ablehnen: niemand bekommt die Karte">👎</button>
+      </div>
+      <div class="bar"><i id="abar"></i></div>
+      <div style="font-size:.8rem;opacity:.9">Ohne Antwort wird automatisch zugestimmt.</div>
+      <button class="btn white small" data-a="takeDiscard" style="margin-top:10px">Ich nehme sie selbst</button>
     </div>`;
   }
 
@@ -576,6 +581,8 @@
     </div>`;
   }
   setInterval(() => {
+    const ab = document.getElementById('abar');
+    if (ab) ab.style.transform = `scaleX(${Math.max(0, 1 - (Date.now() - (ui.approveStart || Date.now())) / 7800)})`;
     const bar = document.getElementById('kbar');
     if (!bar) return;
     const f = Math.max(0, 1 - (Date.now() - ui.knockStart) / 6800);
@@ -616,7 +623,7 @@
         <li><b>Abwerfen:</b> eine Karte auf die Ablage – dann ist der Nächste (im Uhrzeigersinn) dran.</li>
       </ol>
       <h3>Klopfen 👊</h3>
-      <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Es gilt: <b>wer zuerst klopft</b>, bekommt die Karte – der Spieler am Zug hat aber immer Vorrang: nimmt er die Karte selbst, ist das Klopfen hinfällig. Zieht er vom Stapel, bekommt der erste Klopfer die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
+      <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Es gilt: <b>wer zuerst klopft</b>, bekommt die Karte – der Spieler am Zug hat aber immer Vorrang: er kann zustimmen (👍), ablehnen (👎 – dann bekommt niemand die Karte) oder sie selbst nehmen. Ohne Antwort wird nach einigen Sekunden automatisch zugestimmt. Zieht er vom Stapel, bekommt der erste Klopfer die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
       <h3>Bedienung</h3>
       <p>Karten <b>antippen</b> zum Auswählen. Karten <b>ziehen</b>, um sie in deine Wunsch-Reihenfolge zu bringen („Farbe“ oder „Wert“ sortiert automatisch). Eine Karte auf die Ablage ziehen wirft sie ab, auf eine Kombination ziehen legt sie an.</p>
       <p><b>Doppelklick</b> auf eine Karte schiebt sie in den Sammelstapel, Doppelklick im Sammelstapel holt sie zurück.</p>
@@ -916,6 +923,7 @@
       case 'sortRank': ui.sort = 'rank'; store.set('sort', 'rank'); return render();
       case 'clearSel': ui.selected = []; return render();
       case 'drawStock': return ui.ctl.act({ type: 'drawStock' });
+      case 'rejectKnock': return ui.ctl.act({ type: 'rejectKnock' });
       case 'takeDiscard': return ui.ctl.act({ type: 'takeDiscard' });
       case 'knock': return ui.ctl.act({ type: 'knock' });
       case 'pass': return ui.ctl.act({ type: 'pass' });

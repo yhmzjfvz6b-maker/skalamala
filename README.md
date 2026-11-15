@@ -49,7 +49,7 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 
 - 2 Blätter à 55 Karten (je 52 + 3 Joker = 110 Karten), 2–8 Spieler, jeder bekommt 11 Karten. Der Rest liegt verdeckt in der Mitte, eine Karte wird aufgedeckt. Der Geber wechselt jede Runde, links vom Geber wird begonnen.
 - **Zug:** Karte ziehen (offene Ablage oder verdeckter Stapel) → ggf. auslegen / anlegen → eine Karte abwerfen.
-- **Klopfen:** Bevor der Spieler am Zug vom Stapel zieht, können die anderen um die offene Karte klopfen. Es gilt: **wer zuerst klopft**, bekommt die Karte – der Spieler am Zug hat aber Vorrang. Zieht er vom Stapel, bekommt der erste Klopfer die Karte **plus eine verdeckte Strafkarte**, danach zieht der Spieler am Zug. Online hat man dafür ca. 7 Sekunden Zeit, man kann aber auch schon vorher auf „Klopfen" tippen.
+- **Klopfen:** Bevor der Spieler am Zug vom Stapel zieht, können die anderen um die offene Karte klopfen. Es gilt: **wer zuerst klopft**, bekommt die Karte – der Spieler am Zug hat aber Vorrang: 👍 zustimmen, 👎 ablehnen (niemand bekommt die Karte) oder selbst nehmen; ohne Antwort wird nach einigen Sekunden zugestimmt. Zieht er vom Stapel, bekommt der erste Klopfer die Karte **plus eine verdeckte Strafkarte**, danach zieht der Spieler am Zug. Online hat man dafür ca. 7 Sekunden Zeit, man kann aber auch schon vorher auf „Klopfen" tippen.
 - **Gruppe:** gleiche Werte (Farben egal). **Sequenz:** mind. 4 aufeinanderfolgende Karten in derselben Farbe. **Skalamala:** 10er-Sequenz abwechselnd rot/schwarz.
 - **Punkte:** 2–9 = 5, 10–König = 10, Ass = 20, Joker = 50. Wer ausmacht, bekommt 0. Nach 8 Runden gewinnt die niedrigste Summe.
 - Die 8 Runden:

@@ -832,3 +832,16 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .meld .card .cs, .staged .card .cs, .spcards .card .cs { font-size: calc(var(--cw) * .42); padding: 36% 0 0 32%; }
 .meld .card .ci b, .spcards .card .ci b, .staged .card .ci b { font-size: calc(var(--cw) * .32); }
 .meld .card .ci, .spcards .card .ci, .staged .card .ci { left: 9%; top: 6%; }
+
+/* Daumen hoch / runter beim Klopfen */
+.thumbs { display: flex; justify-content: center; gap: 18px; margin: 6px 0 4px; }
+.thumb {
+  width: 84px; height: 84px; border-radius: 50%; font-size: 2.6rem; line-height: 1;
+  border: 4px solid #fff; box-shadow: 0 5px 0 rgba(0,0,0,.3), 0 10px 18px rgba(0,0,0,.3);
+  transition: transform .1s; display: grid; place-items: center;
+}
+.thumb:active { transform: translateY(3px) scale(.97); }
+.thumb.up { background: radial-gradient(circle at 35% 30%, #7dffa0, #1f9a3e); }
+.thumb.down { background: radial-gradient(circle at 35% 30%, #ff8a8f, #b3141c); }
+.thumb:hover { transform: scale(1.06); }
+.knockprompt.approve .card { --cw: 64px; margin: 6px auto; }
