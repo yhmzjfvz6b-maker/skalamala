@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.49 · 15.11.2026';
+  const VERSION = '1.50 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -470,7 +470,8 @@
     if (v.phase === 'lastLay' && v.lastLay) {
       const w = v.players[v.lastLay.winner].name;
       if (v.lastLay.pending.includes(me)) return { t: `🎉 ${w} hat ausgemacht! Du darfst noch die Vorgabe auslegen – nur die Vorgabe, nichts anlegen.`, mine: true };
-      return { t: `🎉 ${w} hat ausgemacht – die anderen dürfen noch ihre Vorgabe auslegen…`, mine: false };
+      const names = (v.lastLay.late || []).map((i) => (i === me ? 'Du' : v.players[i].name));
+      return { t: `🎉 ${w} hat ausgemacht! ✋ Noch ausgelegt: ${names.join(', ')}`, mine: (v.lastLay.late || []).includes(me) };
     }
     if (v.phase === 'knock') {
       if (v.knock.pending.includes(me)) return { t: '👊 Klopfen oder passen?', mine: true };
@@ -560,7 +561,7 @@
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
           const ok = layTarget && !(v.ownLocked && m.owner === me) && E.layOffResult(m, ui.selected.map((id) => handById.get(id)));
-          return `<div class="meld ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})).join('')}</div>`;
+          return `<div class="meld ${m.late ? 'late' : ''} ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})).join('')}</div>`;
         }).join('')}
       </div></div>`);
     }
@@ -763,7 +764,7 @@
       <h3>Die 8 Runden</h3>
       <ol>${E.ROUNDS.map((r) => `<li><b>${esc(r.title)}</b> – ${esc(r.detail)}</li>`).join('')}</ol>
       <p>Am Rundenende drückt <b>jeder Spieler „Weiter“</b> – sind alle bereit, beginnt die nächste Runde.</p>
-      <p><b>Hat jemand ausgemacht</b>, dürfen alle, die noch nicht ausgelegt haben, <b>noch schnell die Vorgabe auslegen</b> – aber nur genau die Vorgabe, nichts anlegen. Das spart Punkte. Dafür bleiben 30 Sekunden („Nichts auslegen“, wenn es nicht passt).</p>
+      <p><b>Hat jemand ausgemacht</b>, dürfen alle, die noch nicht ausgelegt haben, <b>noch schnell die Vorgabe auslegen</b> – aber nur genau die Vorgabe, nichts anlegen. Das passiert <b>automatisch</b>: Hat jemand die Vorgabe auf der Hand, wird sie für ihn ausgelegt – alle sehen es kurz auf dem Tisch, dann wird gezählt. Das spart Punkte.</p>
       <p>In Runde 7 und 8 muss man <b>aus der Hand ausmachen</b>: alle Karten auf einmal auslegen (höchstens eine bleibt zum Abwerfen übrig).</p>
       <h3>Punkte</h3>
       <p>Wer zuerst keine Karten mehr hat, macht aus. Alle anderen zählen ihre Handkarten: 2–9 = 5, 10 bis König = 10, Ass = 20, Joker = 50 Punkte. Nach 8 Runden gewinnt, wer <b>die wenigsten Punkte</b> hat.</p>
@@ -801,7 +802,7 @@
       <h3>The 8 rounds</h3>
       <ol>${RT.map((t, i) => `<li><b>${t}</b> – ${RD[i]}</li>`).join('')}</ol>
       <p>At the end of a round <b>every player presses „Next“</b> – when everyone is ready, the next round begins.</p>
-      <p><b>When someone goes out</b>, everyone who hasn't melded yet may <b>still lay down the contract</b> – exactly the contract, no laying off. That saves points. You have 30 seconds („Lay nothing“ if it doesn't fit).</p>
+      <p><b>When someone goes out</b>, everyone who hasn't melded yet may <b>still lay down the contract</b> – exactly the contract, no laying off. This happens <b>automatically</b>: if someone holds the contract, it is laid down for them – everyone sees it on the table briefly, then points are counted. That saves points.</p>
       <p>In rounds 7 and 8 you must <b>go out from your hand</b>: lay down all cards at once (at most one card is left to discard).</p>
       <h3>Points</h3>
       <p>Whoever runs out of cards first goes out. Everyone else counts their hand: 2–9 = 5, 10 to King = 10, Ace = 20, Joker = 50 points. After 8 rounds, the player with <b>the fewest points</b> wins.</p>
@@ -827,7 +828,7 @@
         <div class="res">${ranking.map((x, k) => `<div class="r ${k === 0 ? 'win' : ''}"><span class="nm">${k + 1}. ${esc(x.p.name)}</span><span class="cards"></span><span class="pts">${x.p.total}</span></div>`).join('')}</div>`;
     } else {
       head = `<h2>Runde ${lr.round + 1} vorbei</h2><p>${lr.winner != null ? `🎉 <b>${esc(v.players[lr.winner].name)}</b> hat ausgemacht!` : 'Der Stapel ist aufgebraucht.'}</p>
-        <div class="res">${v.players.map((p, i) => `<div class="r ${i === lr.winner ? 'win' : ''}"><span class="nm">${esc(p.name)}</span><span class="cards">${i === v.seat ? lr.hands[i].map((c) => cardHTML(c)).join('') : (lr.counts[i] ? `<span class="hint" style="margin:0">${lr.counts[i]} Karte${lr.counts[i] === 1 ? '' : 'n'} übrig</span>` : '')}</span><span class="pts">+${lr.points[i]}</span></div>`).join('')}</div>`;
+        <div class="res">${v.players.map((p, i) => `<div class="r ${i === lr.winner ? 'win' : ''}"><span class="nm">${esc(p.name)}${(lr.late || []).includes(i) ? ' <span class="badge gold">✋ noch ausgelegt</span>' : ''}</span><span class="cards">${i === v.seat ? lr.hands[i].map((c) => cardHTML(c)).join('') : (lr.counts[i] ? `<span class="hint" style="margin:0">${lr.counts[i]} Karte${lr.counts[i] === 1 ? '' : 'n'} übrig</span>` : '')}</span><span class="pts">+${lr.points[i]}</span></div>`).join('')}</div>`;
     }
     const btn = over
       ? (isHost ? `<button class="btn primary" data-a="again">Neues Spiel</button>` : '<p class="hint">Der Gastgeber kann ein neues Spiel starten.</p>')

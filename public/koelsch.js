@@ -5,6 +5,7 @@
   // Ganze Sätze und Wendungen zuerst (Reihenfolge zählt)
   const KSH_PHRASES = [
     [/Los geht's/g, 'Loss jon!'],
+    [/✋ noch ausgelegt/g, '✋ noch flöck usjelaat'],
     [/Geräusche/g, 'Jeräusche'], [/Musik/g, 'Musik'], [/^Ton$/g, 'Tön'],
     [/ – (.+?) gibt, (.+?) beginnt\./g, ' – $1 jitt, $2 fängk aan.'],
     [/Bitte zuerst deinen Namen eingeben\./g, 'Bes esu jot un jif zoeets dinge Name en.'],
@@ -131,6 +132,9 @@
   // ---------- English ----------
   const N = '(.+?)', C = '(\\S+)';
   const EN_PHRASES = [
+    [new RegExp('✋ ' + N + ' legt noch die Vorgabe aus: ', 'g'), '✋ $1 still lays down the contract: '],
+    [new RegExp('🎉 ' + N + ' hat ausgemacht! ✋ Noch ausgelegt: ', 'g'), '🎉 $1 went out! ✋ Still melded: '],
+    [/✋ noch ausgelegt/g, '✋ still melded'],
     [new RegExp('🎉 ' + N + ' macht aus! Wer noch nicht ausgelegt hat, darf jetzt die Vorgabe auslegen\\.', 'g'), '🎉 $1 goes out! Anyone who hasn\'t melded may now lay down the contract.'],
     [new RegExp('🎉 ' + N + ' hat die Runde gewonnen!', 'g'), '🎉 $1 wins the round!'],
     [new RegExp(N + ' legt nichts mehr aus\\.', 'g'), '$1 lays nothing more.'],

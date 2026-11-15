@@ -8,11 +8,7 @@ function sim(n, verbose){
     roundSteps++;
     if(s.phase==='roundEnd'){ stats.steps.push(roundSteps); roundSteps=0; if(s.lastRound.winner!=null) stats.outs[s.round]++; E.act(s,0,{type:'nextRound'}); continue; }
     let acted=false;
-    if(s.phase==='lastLay'){
-      const i=s.lastLay.pending[0]; const a=E.botLastLay(s,i); stats.lastLay=(stats.lastLay||0)+(a.type==='layDown'?1:0);
-      if(E.act(s,i,a)) { const e=E.act(s,i,{type:'lastPass'}); if(e) throw new Error('lastLay '+e); }
-      continue;
-    }
+    if(s.phase==='lastLay'){ stats.lastLay=(stats.lastLay||0)+s.lastLay.late.length; const e=E.act(s,null,{type:'lastLayTimeout'}); if(e) throw new Error('lastLay '+e); continue; }
     if(s.phase==='knock'){
       for(let i=0;i<n;i++){ const a=E.botAction(s,i); if(a){ if(a.type==='knock')stats.knocks++; const e=E.act(s,i,a); if(e) throw new Error('knock err '+e); acted=true; break; } }
       if(!acted){ E.act(s,null,{type:'knockTimeout'}); }

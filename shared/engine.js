@@ -364,23 +364,50 @@
   // Jemand macht aus: Wer noch nicht ausgelegt hat, darf jetzt noch genau die Vorgabe auslegen (nichts anlegen)
   function endRound(s, winner) {
     if (winner != null) {
-      const pend = s.players.map((p, i) => i).filter((i) => i !== winner && !s.players[i].down && s.players[i].hand.length);
-      if (pend.length) {
-        log(s, `🎉 ${s.players[winner].name} macht aus! Wer noch nicht ausgelegt hat, darf jetzt die Vorgabe auslegen.`);
+      // Wer die Vorgabe noch auf der Hand hat, legt sie automatisch aus – für alle sichtbar, kurz vor der Abrechnung
+      const late = [];
+      for (let i = 0; i < s.players.length; i++) {
+        const p = s.players[i];
+        if (i === winner || p.down || !p.hand.length) continue;
+        const a = botLastLay(s, i);
+        if (a.type === 'layDown' && lateLay(s, i, a.melds)) late.push(i);
+      }
+      if (late.length) {
+        log(s, `🎉 ${s.players[winner].name} macht aus!`);
         s.phase = 'lastLay';
-        s.lastLay = { winner, pending: pend, deadline: Date.now() + (s.opts.lastLayMs || 30000) };
+        s.lastLay = { winner, pending: [], late, deadline: Date.now() + (s.opts.lastLayMs || 4500) };
         return;
       }
     }
     finishRound(s, winner);
   }
+  // Nach dem Ausmachen eines anderen: genau die Vorgabe noch auslegen (nichts anlegen)
+  function lateLay(s, seat, melds) {
+    const R = ROUNDS[s.round], p = s.players[seat];
+    if (!Array.isArray(melds) || melds.length !== R.slots.length) return false;
+    const cards = takeFromHand(p, [].concat(...melds));
+    if (!cards) return false;
+    const meldCards = melds.map((ids) => ids.map((id) => cards.find((c) => c.id === id)));
+    const types = matchContract(meldCards, R.slots);
+    if (!types) return false;
+    removeFromHand(p, cards);
+    meldCards.forEach((mc, i) => {
+      const arr = validMeld(mc, types[i], 0, mc[0].joker && !mc[mc.length - 1].joker ? 'low' : undefined);
+      s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank), late: true });
+    });
+    p.down = true;
+    log(s, `✋ ${p.name} legt noch die Vorgabe aus: ${types.map((t) => TYPE_NAME[t]).join(', ')}.`);
+    return true;
+  }
   function finishRound(s, winner) {
+    const late = s.lastLay ? s.lastLay.late || [] : [];
     s.lastLay = null;
     const pts = s.players.map((p, i) => (i === winner ? 0 : handPoints(p.hand)));
     s.players.forEach((p, i) => { p.scores.push(pts[i]); p.total += pts[i]; });
     s.lastRound = {
       round: s.round, winner,
       points: pts,
+      late,
       hands: s.players.map((p) => p.hand.slice()),
     };
     if (winner != null) log(s, `🎉 ${s.players[winner].name} hat die Runde gewonnen!`);
@@ -617,7 +644,7 @@
       dealer: s.dealer,
       players: s.players.map((p) => ({ name: p.name, bot: p.bot, down: p.down, handCount: p.hand.length, total: p.total, scores: p.scores.slice() })),
       hand: seat != null && s.players[seat] ? s.players[seat].hand.slice() : [],
-      melds: s.melds.map((m) => ({ id: m.id, owner: m.owner, t: m.t, cards: m.cards.slice(), ranks: m.ranks.slice() })),
+      melds: s.melds.map((m) => ({ id: m.id, owner: m.owner, t: m.t, cards: m.cards.slice(), ranks: m.ranks.slice(), late: !!m.late })),
       discardTop: s.discard.length ? s.discard[s.discard.length - 1] : null,
       discardCount: s.discard.length,
       discardBy: s.discardBy,
@@ -636,13 +663,14 @@
         canKnock: canKnock(s, seat),
         pending: s.phase === 'knock' ? knockPending(s) : [],
       },
-      lastLay: s.phase === 'lastLay' && s.lastLay ? { winner: s.lastLay.winner, pending: s.lastLay.pending.slice(), deadline: s.lastLay.deadline } : null,
+      lastLay: s.phase === 'lastLay' && s.lastLay ? { winner: s.lastLay.winner, pending: s.lastLay.pending.slice(), late: (s.lastLay.late || []).slice(), deadline: s.lastLay.deadline } : null,
       log: s.log.slice(-25),
       // Am Rundenende nur Punkte zeigen – fremde Karten bleiben verdeckt, nur die eigenen Restkarten sind sichtbar
       lastRound: reveal && s.lastRound ? {
         round: s.lastRound.round, winner: s.lastRound.winner, points: s.lastRound.points.slice(),
         hands: s.lastRound.hands.map((h, i) => (i === seat ? h.slice() : [])),
         counts: s.lastRound.hands.map((h) => h.length),
+        late: (s.lastRound.late || []).slice(),
       } : null,
       seq: s.seq,
     };

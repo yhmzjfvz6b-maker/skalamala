@@ -67,7 +67,7 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 - **Die 9 zählt 5 Punkte** (Funktion `cardPoints`).
 - **Ass** in Sequenzen hoch (D-K-A) oder niedrig (A-2-3), auch rundherum (K-A-2, höchstens 13 Karten).
 - **Joker** sind beliebig einsetzbar, aber in jeder Kombination muss mindestens eine echte Karte mehr liegen als Joker (2 Karten + 1 Joker, 3 Karten + 2 Joker …).
-- **Nach dem Ausmachen:** Wer noch nicht ausgelegt hat, darf noch genau die Vorgabe auslegen (nichts anlegen) – 30 Sekunden Zeit, danach wird gezählt.
+- **Nach dem Ausmachen:** Wer noch nicht ausgelegt hat, darf noch genau die Vorgabe auslegen (nichts anlegen). Das passiert automatisch und ist für alle kurz auf dem Tisch zu sehen, danach wird gezählt.
 - **Joker tauschen:** Wer ausgelegt hat, kann die echte Karte auf den Platz eines Jokers in einer Auslage legen. Der Joker kommt zurück auf die Hand und muss im selben Zug wieder an eine beliebige Kombination angelegt werden.
 - **Spielmodus:** „💡 Mit Tipps“ zeigt Vorschläge für den eigenen Zug, „🏆 Turnier“ spielt ohne Tipps (online legt der Gastgeber den Modus fest).
 - Beim **ersten Auslegen genau die Vorgabe** (z. B. Runde 1: genau Gruppe aus 3 + Sequenz aus 4). Nur wo „mind.“ steht (Runde 3, 7, 8), dürfen Kombinationen länger sein.

@@ -1056,3 +1056,6 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .card.joker.jrep .ci .js { color: #6a2fb0; font-style: normal; font-size: .9em; margin-top: 1px; }
 .card.joker.jrep .jk { opacity: .55; }
 .card.joker.jrep .jk em { display: none; }
+/* 1.50: nachträglich ausgelegte Vorgaben hervorheben */
+.meld.late { outline: 3px solid #ffd23f; outline-offset: 2px; border-radius: 10px; animation: latepulse 1.2s ease-in-out 3; }
+@keyframes latepulse { 50% { outline-color: rgba(255,210,63,.25); } }
