@@ -1046,3 +1046,5 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
   border: max(1px, .13em) solid #0a1e66; border-radius: .28em;
   box-shadow: inset 0 0 0 max(1px, .08em) #fff, inset 0 0 0 max(1.5px, .17em) #ffd23f, 1px 1px 0 rgba(10,30,102,.35);
   transform: translate(-50%, -50%) rotate(10deg); }
+/* 1.48: überlappende Mini-Karten – jedes Kärtchen eigene Ebene, damit kein Symbol in die Nachbarkarte rutscht */
+.meld .card, .staged .card, .spcards .card, .res .card { isolation: isolate; }
