@@ -472,7 +472,8 @@
           const curAuto = s.autoSeats ? s.autoSeats[s.current] : s.players[s.current].bot;
           // Klopfen während des Klopf-Fensters: ein Mensch am Zug wird trotzdem gefragt (👍/👎)
           if (s.phase === 'knock' && !curAuto) s.phase = 'draw';
-          if (s.phase === 'draw') s.knock.approveDeadline = Date.now() + (s.opts.approveMs || 8000);
+          // Entscheidung (👍/👎) bleibt stehen, bis der Spieler am Zug antwortet – online nur mit großzügigem Sicherheits-Zeitlimit
+          if (s.phase === 'draw') s.knock.approveDeadline = s.opts.approveMs ? Date.now() + s.opts.approveMs : 0;
         }
         log(s, s.knock.order.length === 1 ? `👊 ${p.name} klopft als Erste(r)!` : `👊 ${p.name} klopft – zu spät.`);
       }
@@ -935,7 +936,7 @@
   class GameHost {
     constructor(players, opts) {
       this.opts = Object.assign({ botDelay: 900, knockMs: 7000, onChange: () => {}, isAuto: null }, opts || {});
-      this.s = newGame(players, { knockMs: this.opts.knockMs });
+      this.s = newGame(players, { knockMs: this.opts.knockMs, approveMs: this.opts.approveMs || 0 });
       this.timers = [];
       this._tick();
     }

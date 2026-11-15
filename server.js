@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, version: '1.45', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
+    return res.end(JSON.stringify({ ok: true, version: '1.46', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');
@@ -168,6 +168,7 @@ function startGame(room) {
   room.game = new E.GameHost(room.seats.map((s) => ({ name: s.name, bot: s.bot })), {
     botDelay: 1000,
     knockMs: 7000,
+    approveMs: 120000, // online: nach 2 Minuten ohne Antwort wird zugestimmt, damit niemand hängen bleibt
     isAuto: (seat) => {
       const st = room.seats[seat];
       return st.bot || (!st.ws && Date.now() - (st.leftAt || 0) > RECONNECT_GRACE_MS);
