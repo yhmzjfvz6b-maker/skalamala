@@ -78,7 +78,7 @@
   // ---- Geräusche ----
   function tusch(t, big) {
     const f = lp(2400, sfxBus);
-    const seq = big ? [[60, 64, 67], [60, 64, 67], [60, 64, 67], [65, 69, 72], [65, 69, 72], [65, 69, 72], [67, 72, 76]] : [[60, 64, 67], [60, 64, 67], [60, 64, 67], [65, 69, 72]];
+    const seq = big ? [[60, 64, 67], [60, 64, 67], [60, 64, 67], [65, 69, 72], [65, 69, 72], [65, 69, 72], [67, 72, 76]] : [[60, 64, 67], [65, 69, 72]]; // Auslegen: kurzes „ta-taa“
     seq.forEach((c, i) => {
       const last = i === seq.length - 1, d = last ? (big ? 1.6 : 1.1) : 0.12, st = t + i * 0.16;
       c.forEach((n) => { tone(st, n, d, 'sawtooth', 0.06, f); tone(st, n + 12, d, 'square', 0.03, f); });
