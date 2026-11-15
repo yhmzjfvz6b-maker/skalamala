@@ -248,6 +248,7 @@
     if (seat == null || seat === s.current) return false;
     if (s.phase !== 'draw' && s.phase !== 'knock') return false;
     if (!ROUNDS[s.round].knock) return false;
+    if (s.knock && s.knock.rejected) return false;
     const p = s.players[seat];
     if (!p || p.down) return false;
     if (!s.discard.length || seat === s.discardBy) return false;
@@ -359,7 +360,12 @@
         s.knock.order = s.knock.order || [];
         s.knock.order.push(seat);
         // Spieler am Zug muss zustimmen (👍), ablehnen (👎) oder selbst nehmen – ohne Antwort wird automatisch zugestimmt
-        if (s.phase === 'draw' && s.knock.order.length === 1) s.knock.approveDeadline = Date.now() + (s.opts.approveMs || 8000);
+        if (s.knock.order.length === 1) {
+          const curAuto = s.autoSeats ? s.autoSeats[s.current] : s.players[s.current].bot;
+          // Klopfen während des Klopf-Fensters: ein Mensch am Zug wird trotzdem gefragt (👍/👎)
+          if (s.phase === 'knock' && !curAuto) s.phase = 'draw';
+          if (s.phase === 'draw') s.knock.approveDeadline = Date.now() + (s.opts.approveMs || 8000);
+        }
         log(s, s.knock.order.length === 1 ? `👊 ${p.name} klopft als Erste(r)!` : `👊 ${p.name} klopft – zu spät.`);
       }
       if (s.phase === 'knock' && knockDecided(s)) resolveKnock(s);
@@ -383,17 +389,13 @@
       }
       if (a.type === 'rejectKnock') {
         if (!(s.knock.order || []).length) return 'Niemand hat geklopft';
-        const c = drawFromStock(s);
-        s.knock = { responses: {}, deadline: 0, order: [] };
-        if (!c) { endRound(s, null); return null; }
-        p.hand.push(c);
-        s.lastDrawn = c.id;
-        s.phase = 'play';
-        log(s, `👎 ${p.name} lehnt das Klopfen ab und zieht vom Stapel.`);
+        // 👎 abgelehnt: niemand bekommt die Karte, keine Strafkarte – der Spieler am Zug zieht ganz normal (offen oder verdeckt)
+        s.knock = { responses: {}, deadline: 0, order: [], rejected: true };
+        log(s, `👎 ${p.name} lehnt das Klopfen ab.`);
         return null;
       }
       if (a.type === 'drawStock') {
-        if (R.knock && knockEligible(s).length) {
+        if (R.knock && !s.knock.rejected && knockEligible(s).length) {
           s.phase = 'knock';
           s.knock.deadline = Date.now() + s.opts.knockMs;
           if (knockDecided(s)) resolveKnock(s);
@@ -753,6 +755,7 @@
       this._clear();
       if (this.dead) return;
       const s = this.s, seq = s.seq;
+      s.autoSeats = s.players.map((_, i) => !!this.isAuto(i));
       if (s.phase === 'knock') {
         const pend = knockPending(s);
         const autos = pend.filter((i) => this.isAuto(i));
