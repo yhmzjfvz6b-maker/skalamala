@@ -223,7 +223,7 @@
     [/Online gegen echte Gegner/g, 'Online against real players'],
     [/Zurück in Raum (\w+)/g, 'Back to room $1'],
     [new RegExp(N + ' betreten', 'g'), 'Enter $1'],
-    [new RegExp('Fester Raum für ' + N + ' · Code', 'g'), 'Fixed room for $1 · code'],
+    [new RegExp('Fester Raum für (.+)$', 'g'), 'Fixed room for $1'],
     [/Raum erstellen/g, 'Create room'], [/^Beitreten$/g, 'Join'],
     [/Erstelle einen Raum und schick deinen Mitspielern den 4-stelligen Code oder den Link\. Freie Plätze kannst du mit Bots auffüllen\./g, 'Create a room and send your friends the 4-letter code or the link. Empty seats can be filled with bots.'],
     [/Für Online-Spiele muss diese Seite über den Skalamala-Server geöffnet werden \(siehe Anleitung in der README\)\. Gegen Bots kannst du sofort spielen\./g, 'For online games this page must be opened via the Skalamala server (see README). You can play against bots right away.'],

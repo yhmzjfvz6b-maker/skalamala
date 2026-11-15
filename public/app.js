@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.34 · 15.11.2026';
+  const VERSION = '1.35 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -339,7 +339,7 @@
           ${(ui.fixedRooms || []).map((f) => `
           <div class="fixedroom">
             <button class="btn green" data-a="joinFixed" data-code="${esc(f.code)}">🎪 ${esc(f.name)} betreten</button>
-            <div class="hint" style="margin:4px 0 0">Fester Raum für ${esc(f.members.join(', '))} · Code <b data-nok>${esc(f.code)}</b></div>
+            <div class="hint" style="margin:4px 0 0">Fester Raum für ${esc(f.members.join(', '))}</div>
           </div>`).join('')}
           <div class="row grow">
             <button class="btn primary" data-a="create">Raum erstellen</button>
