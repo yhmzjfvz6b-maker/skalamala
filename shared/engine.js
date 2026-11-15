@@ -11,7 +11,7 @@
   const SUIT_NAME = { S: 'Pik', H: 'Herz', D: 'Karo', C: 'Kreuz' };
   const RANK_LABEL = { 11: 'B', 12: 'D', 13: 'K', 14: 'A' };
   const isRed = (c) => c.suit === 'H' || c.suit === 'D';
-  const normPos = (r) => (r > 14 ? ((r - 1) % 13) + 1 : r < 1 ? r + 13 : r); // Rundherum-Positionen → 1…14
+  const normPos = (r) => (r >= 1 && r <= 14 ? r : ((((r - 1) % 13) + 13) % 13) + 1); // Rundherum-Positionen → 1…14
   const rankLabel = (r) => { r = normPos(r); return RANK_LABEL[r] || String(r === 1 ? 'A' : r); };
   const cardLabel = (c) => (c.joker ? 'Joker' : SUIT_SYM[c.suit] + rankLabel(c.rank));
 
@@ -143,10 +143,9 @@
       const out = [];
       let ji = 0;
       for (let p = lo; p <= hi; p++) {
-        const n = ((p - 1) % 13) + 1;
-        const rank = n === 1 ? 14 : n;
-        if (pos.has(p)) out.push({ card: pos.get(p), rank });
-        else out.push({ card: jokers[ji++], rank });
+        // fortlaufende Plätze (über 14 hinaus = rundherum), Anzeige über normPos
+        if (pos.has(p)) out.push({ card: pos.get(p), rank: p });
+        else out.push({ card: jokers[ji++], rank: p });
       }
       return out;
     }
@@ -184,7 +183,7 @@
     for (const e of ends) {
       const p = e === 'start' ? lo - 1 : hi + 1;
       const nlo = Math.min(lo, p), nhi = Math.max(hi, p);
-      if (nhi - nlo + 1 > ((nlo >= 1 && nhi <= 14) ? 14 : 13)) continue;
+      if (nhi - nlo + 1 > 26) continue; // rundherum weiterlegen erlaubt (2 Decks: höchstens zwei volle Runden)
       if (!c.joker) {
         if (!sameRank(c.rank, p)) continue;
         if (m.t === 'S' && c.suit !== nat[0].x.suit) continue;
@@ -195,6 +194,15 @@
       return cardsN.map((x, i) => ({ card: x, rank: ranksN[i] }));
     }
     return null;
+  }
+  // Prüft eine liegende Kombination mit ihren festen Plätzen (auch lange Rundherum-Sequenzen)
+  function checkMeld(m) {
+    const nj = m.cards.filter((c) => c.joker).length;
+    if (m.cards.length - nj <= nj) return false;
+    if (m.t === 'G') return !!validMeld(m.cards, 'G');
+    for (let i = 1; i < m.ranks.length; i++) if (m.ranks[i] !== m.ranks[i - 1] + 1) return false;
+    const nat = m.cards.map((c, i) => ({ c, p: m.ranks[i] })).filter((o) => !o.c.joker);
+    return nat.every((o) => sameRank(o.c.rank, o.p) && (m.t === 'S' ? o.c.suit === nat[0].c.suit : (isRed(o.c) === isRed(nat[0].c)) === (Math.abs(o.p - nat[0].p) % 2 === 0)));
   }
   function layOffResult(m, cards, pos) {
     if (cards.length === 1 && !cards[0].joker) {
@@ -526,10 +534,10 @@
       }
       if (a.type === 'rejectKnock') {
         if (!(s.knock.order || []).length) return 'Niemand hat geklopft';
-        // 👎 abgelehnt: niemand bekommt die Karte, keine Strafkarte – der Spieler am Zug zieht ganz normal (offen oder verdeckt)
+        // 👎 abgelehnt: der Spieler am Zug nimmt die offene Karte selbst – ohne Strafkarte
+        log(s, `👎 ${p.name} lehnt das Klopfen ab und nimmt die Karte selbst.`);
         s.knock = { responses: {}, deadline: 0, order: [], rejected: true };
-        log(s, `👎 ${p.name} lehnt das Klopfen ab.`);
-        return null;
+        return act(s, seat, { type: 'takeDiscard' });
       }
       if (a.type === 'drawStock') {
         if (R.knock && !s.knock.rejected && knockEligible(s).length) {
@@ -1037,7 +1045,7 @@
       if ((s.phase === 'draw' || s.phase === 'play') && this.isAuto(s.current)) {
         let delay = s.phase === 'draw' ? this.opts.botDelay * 1.2 : this.opts.botDelay;
         // Können Menschen um die offene Karte klopfen, überlegt der Bot länger – damit „Klopfen“ lange genug zu sehen ist
-        if (s.phase === 'draw' && !s.knock.order.length && s.players.some((_, i) => i !== s.current && !this.isAuto(i) && canKnock(s, i))) delay = Math.max(delay, 3500);
+        if (s.phase === 'draw' && !s.knock.order.length && s.players.some((_, i) => i !== s.current && !this.isAuto(i) && canKnock(s, i))) delay = Math.max(delay, 5000);
         this._later(delay, () => {
           if (s.seq !== seq) return;
           const cur = s.current;
@@ -1056,6 +1064,6 @@
 
   return {
     SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, RANK_LABEL, isRed, rankLabel, normPos, cardLabel, cardPoints, handPoints,
-    validMeld, layOffResult, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock, botLastLay,
+    validMeld, layOffResult, checkMeld, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock, botLastLay,
   };
 });

@@ -20,7 +20,7 @@ function sim(n, verbose){
     // invariants
     const total = s.stock.length+s.discard.length+s.players.reduce((t,p)=>t+p.hand.length,0)+s.melds.reduce((t,m)=>t+m.cards.length,0);
     if(total!==110) throw new Error('card count '+total);
-    for(const m of s.melds) if(!E.validMeld(m.cards,m.t)) throw new Error('invalid meld');
+    for(const m of s.melds) if(!E.checkMeld(m)) throw new Error('invalid meld '+m.t+' '+m.cards.map((c,i)=>(c.joker?'J':c.suit+c.rank)+'@'+m.ranks[i]).join(' '));
   }
   if(s.lastRound.winner!=null) stats.outs[7]++;
   stats.steps.push(roundSteps);
