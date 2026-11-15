@@ -2,7 +2,9 @@
 (function () {
   'use strict';
   const E = window.Skalamala;
-  const LOGO = 'logo.webp';
+  const LOGO = 'logo.svg';
+  const EMBLEM = 'emblem.svg';
+  const VERSION = '1.18 · 14.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -149,6 +151,7 @@
     bots: store.get('bots', 2),
     knockPrompt: store.get('knockPrompt', true),
     sort: store.get('sort', 'suit'),
+    sideW: store.get('sideW', 0),
     order: [], orderRound: -1, dragging: false, pendingRender: false,
     ctl: null,
     view: null,
@@ -272,6 +275,7 @@
     render();
     // Rundenende
     if ((v.phase === 'roundEnd' || v.phase === 'gameEnd') && (!prev || prev.phase !== v.phase || prev.round !== v.round)) showRoundEnd();
+    else if (v.phase === 'roundEnd' && ui.modalKind === 'roundEnd' && v.multi) showRoundEnd();
     if (v.phase !== 'roundEnd' && v.phase !== 'gameEnd' && ui.modalKind === 'roundEnd') closeModal();
   }
 
@@ -291,7 +295,7 @@
     <div class="home">
       <div class="logo">
         <div class="burst"></div>
-        <img src="${LOGO}" alt="Skalamala – Das verrückte Kartenspiel" width="720" height="484">
+        <img src="${LOGO}" alt="Skalamala – Das verrückte Kartenspiel" width="1260" height="600">
         <h1 class="sr">Skalamala</h1>
       </div>
       <p class="tagline">8 Runden · wer am wenigsten Punkte hat, gewinnt!</p>
@@ -322,6 +326,7 @@
         ` : `<p class="hint">Für Online-Spiele muss diese Seite über den Skalamala-Server geöffnet werden (siehe Anleitung in der README). Gegen Bots kannst du sofort spielen.</p>`}
       </div>
       <button class="linkbtn" data-a="rules">Spielregeln</button>
+      <div class="version">Version ${VERSION}</div>
     </div>`;
     const nameEl = document.getElementById('name');
     nameEl.addEventListener('input', () => { ui.name = nameEl.value.trim(); store.set('name', ui.name); });
@@ -381,6 +386,7 @@
       return { t: `Es darf geklopft werden…`, mine: false };
     }
     if (v.current === me) {
+      if (v.phase === 'draw' && v.knock.first != null) return { t: `${v.players[v.knock.first].name} klopft – genehmigen oder selbst nehmen?`, mine: true };
       if (v.phase === 'draw') return { t: 'Du bist dran – zieh eine Karte (Stapel oder Ablage)', mine: true };
       const p = v.players[me];
       if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Genau die Vorgabe auslegen – oder abwerfen', mine: true };
@@ -424,7 +430,7 @@
     const piles = `
       <div class="piles">
         <div class="pile ${canDraw ? 'clickable' : ''}" data-a="${canDraw ? 'drawStock' : ''}">
-          <div class="back"><img src="${LOGO}" alt=""><span>${v.stockCount}</span></div>
+          <div class="back"><img src="${EMBLEM}" alt=""><span>${v.stockCount}</span></div>
           <div class="lbl">Stapel</div>
         </div>
         <div class="pile ${canDraw && v.discardTop ? 'clickable' : ''} ${canDiscardTap ? 'clickable' : ''}" data-drop="discard" data-a="${canDraw ? 'takeDiscard' : canDiscardTap ? 'discardSel' : ''}">
@@ -467,7 +473,12 @@
       actions.push(`<button class="btn ${contract ? '' : 'primary'}" data-a="discardSel" ${ui.selected.length === 1 ? '' : 'disabled'}>Abwerfen</button>`);
     }
     if (ui.selected.length >= 1 && v.phase !== 'roundEnd' && v.phase !== 'gameEnd') actions.unshift(`<button class="btn green" data-a="newPile">＋ Sammelstapel (${ui.selected.length})</button>`);
-    if (v.phase === 'roundEnd' || v.phase === 'gameEnd') actions.push(`<button class="btn primary" data-a="showResult">${v.phase === 'gameEnd' ? 'Endergebnis' : 'Rundenergebnis'}</button>`);
+    if (v.phase === 'roundEnd' || v.phase === 'gameEnd') {
+      const isHostHere = v.host === v.seat || v.host == null;
+      actions.push(`<button class="btn ${isHostHere ? '' : 'primary'}" data-a="showResult">${v.phase === 'gameEnd' ? 'Endergebnis' : 'Rundenergebnis'}</button>`);
+      if (v.phase === 'roundEnd') actions.push(nextRoundButton(v));
+      if (v.phase === 'gameEnd' && isHostHere) actions.push('<button class="btn primary" data-a="again">Neues Spiel</button>');
+    }
     const staging = '';
     const pileRow = `<div class="pilerow ${ui.piles.length ? '' : 'empty'}" id="pilerow">
       ${ui.piles.map((ids, i) => {
@@ -494,7 +505,7 @@
     $app.innerHTML = `
     <div class="game">
       <div class="topbar">
-        <img class="toplogo" src="${LOGO}" alt="Skalamala">
+        <img class="toplogo" src="${EMBLEM}" alt="Skalamala">
         <div class="contract">
           <span class="roundchip">${v.round + 1}/8</span>
           <div class="txt"><div class="ttl">${esc(R.title)}</div><div class="det ${warn ? 'warn' : ''}">${esc(R.detail)}</div></div>
@@ -505,7 +516,7 @@
         <button class="btn icon ghost" data-a="menu" aria-label="Menü">☰</button>
         <button class="btn icon danger exitbtn" data-a="leaveAsk" aria-label="Spiel verlassen" title="Spiel verlassen">⏻</button>
       </div>
-      <div class="main">
+      <div class="main" id="main" style="${ui.sideW ? `--sidew:${ui.sideW}px` : ''}">
         <div class="handzone">
           <div class="handbar">
             <span>${v.hand.length} Karten · ${handPts} Pkt <span class="draghint">· ziehen zum Sortieren</span></span>
@@ -518,20 +529,39 @@
           ${pileRow}
           <div class="hand" id="hand">${handHTML}</div>
           <div class="dock">
-            <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
-            <div class="lastlog">${esc(lastLog)}</div>
-            ${staging}
-            <div class="actions">${actions.join('')}</div>
+            <div class="dockrow">
+              <div class="dockpiles">${piles}</div>
+              <div class="dockmain">
+                <div class="status ${st.mine ? 'mine' : ''}">${esc(st.t)}</div>
+                <div class="lastlog">${esc(lastLog)}</div>
+                ${staging}
+                <div class="actions">${actions.join('')}</div>
+              </div>
+              <div class="dockslots">${slots}</div>
+            </div>
           </div>
         </div>
+        <div class="splitter" id="splitter" title="Ziehen, um die Breite zu ändern (Doppelklick: zurücksetzen)" aria-label="Breite ändern" role="separator"><span></span></div>
         <div class="side">
           <div class="tablezone">${meldArea}</div>
-          <div class="pilebar">${piles}${slots}</div>
         </div>
       </div>
     </div>
-    ${renderKnockPrompt(v)}`;
+    ${renderKnockPrompt(v)}${renderApprovePrompt(v)}`;
     layoutHand();
+  }
+
+  // Ich bin dran, jemand hat geklopft: genehmigen (nicken) oder selbst nehmen
+  function renderApprovePrompt(v) {
+    if (v.current !== v.seat || v.phase !== 'draw' || v.knock.first == null || !v.discardTop) return '';
+    const who = v.players[v.knock.first].name;
+    return `<div class="knockprompt approve">
+      <h3>${esc(who)} klopft!</h3>
+      <div style="font-size:.95rem">Klopfen genehmigen?</div>
+      ${cardHTML(v.discardTop)}
+      <div style="font-size:.86rem">Nickst du, bekommt ${esc(who)} die Karte <b>plus 1 Strafkarte</b> – und du ziehst vom Stapel.</div>
+      <div class="row grow" style="margin-top:14px"><button class="btn white" data-a="takeDiscard">Ich nehme sie selbst</button><button class="btn primary" data-a="drawStock">👍 Genehmigen</button></div>
+    </div>`;
   }
 
   function renderKnockPrompt(v) {
@@ -594,7 +624,7 @@
       <h3>Kombinationen</h3>
       <ul>
         <li><b>Gruppe:</b> gleiche Werte, z. B. 3 Zehnen (Farben egal).</li>
-        <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3), aber nicht herum (K-A-2).</li>
+        <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3) – auch rundherum ist erlaubt (K-A-2).</li>
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
         <li><b>Joker</b> ersetzen jede beliebige Karte – auch mehrere Joker in einer Kombination sind erlaubt.</li>
         <li>Beim <b>ersten Auslegen</b> wird <b>genau die Vorgabe</b> ausgelegt – z. B. in Runde 1 genau eine Gruppe aus 3 Karten und eine Sequenz aus 4 Karten. Steht „mind.“ dabei, darf die Kombination länger sein.</li>
@@ -602,6 +632,7 @@
       </ul>
       <h3>Die 8 Runden</h3>
       <ol>${E.ROUNDS.map((r) => `<li><b>${esc(r.title)}</b> – ${esc(r.detail)}</li>`).join('')}</ol>
+      <p>Am Rundenende drückt <b>jeder Spieler „Weiter“</b> – sind alle bereit, beginnt die nächste Runde.</p>
       <p>In Runde 7 und 8 muss man <b>aus der Hand ausmachen</b>: alle Karten auf einmal auslegen (höchstens eine bleibt zum Abwerfen übrig).</p>
       <h3>Punkte</h3>
       <p>Wer zuerst keine Karten mehr hat, macht aus. Alle anderen zählen ihre Handkarten: 2–9 = 5, 10 bis König = 10, Ass = 20, Joker = 50 Punkte. Nach 8 Runden gewinnt, wer <b>die wenigsten Punkte</b> hat.</p>
@@ -631,10 +662,21 @@
     }
     const btn = over
       ? (isHost ? `<button class="btn primary" data-a="again">Neues Spiel</button>` : '<p class="hint">Der Gastgeber kann ein neues Spiel starten.</p>')
-      : (isHost ? `<button class="btn primary" data-a="nextRound">Weiter zu Runde ${lr.round + 2}</button>` : '<p class="hint">Warte auf den Gastgeber…</p>');
+      : nextRoundButton(v);
     openModal(`${head}<h3>Punktestand</h3>${scoresHTML(v)}<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn danger" data-a="leaveAsk">Spiel verlassen</button><span style="flex:1"></span><button class="btn ghost" data-close>Tisch ansehen</button>${btn}</div>`, onModalClick);
     ui.modalKind = 'roundEnd';
   }
+  // „Weiter“: online bestätigt jeder Spieler, sind alle bereit, geht es los
+  function nextRoundButton(v) {
+    const label = `Weiter zu Runde ${v.round + 2} ▶`;
+    if (!v.multi || !v.ready) return `<button class="btn primary" data-a="nextRound">${label}</button>`;
+    if (v.ready[v.seat]) {
+      const wait = v.players.filter((p, i) => !v.ready[i] && p.connected !== false).map((p) => p.name);
+      return `<span class="badge gold" style="padding:8px 14px;font-size:.85rem">✓ Bereit${wait.length ? ' – warte auf ' + esc(wait.join(', ')) : ''}</span>`;
+    }
+    return `<button class="btn primary" data-a="nextRound">${label}</button>`;
+  }
+
   function onModalClick(e) {
     const b = e.target.closest('[data-a]');
     if (b) handle(b.dataset.a, b);
@@ -651,6 +693,39 @@
   $app.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'code') handle('join');
     if (e.key === 'Enter' && e.target.id === 'name' && !ui.onlineAvailable) handle('playBots');
+  });
+
+  // ---------- Trenner zwischen Kartenfeld und rechter Seite ----------
+  let split = null;
+  $app.addEventListener('pointerdown', (e) => {
+    const sp = e.target.closest('#splitter');
+    if (!sp) return;
+    const main = document.getElementById('main');
+    split = { pid: e.pointerId, main };
+    try { sp.setPointerCapture(e.pointerId); } catch (err) {}
+    sp.classList.add('active');
+    e.preventDefault();
+  });
+  $app.addEventListener('pointermove', (e) => {
+    if (!split || e.pointerId !== split.pid) return;
+    const r = split.main.getBoundingClientRect();
+    const w = Math.round(Math.max(260, Math.min(r.width - 420, r.right - e.clientX - 14)));
+    ui.sideW = w;
+    split.main.style.setProperty('--sidew', w + 'px');
+    if (!split.raf) split.raf = requestAnimationFrame(() => { if (split) split.raf = 0; layoutHand(); });
+  });
+  const endSplit = (e) => {
+    if (!split || e.pointerId !== split.pid) return;
+    split = null;
+    const sp = document.getElementById('splitter'); if (sp) sp.classList.remove('active');
+    store.set('sideW', ui.sideW);
+    layoutHand();
+  };
+  $app.addEventListener('pointerup', endSplit);
+  $app.addEventListener('pointercancel', endSplit);
+  $app.addEventListener('dblclick', (e) => {
+    if (!e.target.closest('#splitter')) return;
+    ui.sideW = 0; store.set('sideW', 0); render();
   });
 
   // ---------- Ziehen & Ablegen der Handkarten ----------
@@ -833,7 +908,7 @@
           <label class="toggle"><input type="checkbox" id="kp2" ${ui.knockPrompt ? 'checked' : ''}> Bei fremden Zügen fragen, ob ich klopfen will</label>
           <div class="row" style="margin-top:14px"><button class="btn small" data-a="rules">📜 Spielregeln</button></div>
           <h3>Verlauf</h3><ul class="loglist">${v.log.slice().reverse().map((l) => `<li>${esc(l.msg)}</li>`).join('')}</ul>
-          <div class="divider"></div><button class="btn danger" data-a="leave">Spiel verlassen</button>`, (e) => {
+          <div class="divider"></div><button class="btn danger" data-a="leave">Spiel verlassen</button><p class="hint">Version ${VERSION}</p>`, (e) => {
           if (e.target.id === 'kp2') { ui.knockPrompt = e.target.checked; store.set('knockPrompt', ui.knockPrompt); }
           onModalClick(e);
         });
@@ -871,7 +946,8 @@
         ui.selected = [];
         return ui.ctl.act({ type: 'layDown', melds: c.melds });
       }
-      case 'nextRound': closeModal(); return ui.ctl.act({ type: 'nextRound' });
+      case 'showResult': return showRoundEnd();
+      case 'nextRound': if (!(ui.view && ui.view.multi)) closeModal(); return ui.ctl.act({ type: 'nextRound' });
       case 'again': closeModal(); return ui.ctl.again();
     }
   }

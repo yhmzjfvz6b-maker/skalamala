@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+    return res.end(JSON.stringify({ ok: true, version: '1.18', rooms: rooms.size }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');
@@ -128,9 +128,22 @@ function sendState(room) {
     if (!s.ws) return;
     const v = room.game.view(i);
     v.host = host;
+    // Wer hat am Rundenende schon „Weiter“ gedrückt?
+    const rd = room.ready || new Set();
+    v.ready = room.seats.map((st) => st.bot || rd.has(st));
+    v.multi = true;
     v.players.forEach((p, k) => { const st = room.seats[k]; p.connected = st.bot || !!st.ws; });
     s.ws.send({ t: 'state', view: v });
   });
+}
+function tryNextRound(room) {
+  if (!room.game || room.game.s.phase !== 'roundEnd') return;
+  room.ready = room.ready || new Set();
+  const humans = room.seats.filter((s) => !s.bot && s.ws);
+  if (humans.length && humans.every((h) => room.ready.has(h))) {
+    room.ready.clear();
+    room.game.act(null, { type: 'nextRound' });
+  } else sendState(room);
 }
 function pickHost(room) {
   if (room.host && room.seats.includes(room.host) && room.host.ws) return;
@@ -139,6 +152,7 @@ function pickHost(room) {
 }
 function startGame(room) {
   if (room.game) room.game.destroy();
+  room.ready = new Set();
   room.game = new E.GameHost(room.seats.map((s) => ({ name: s.name, bot: s.bot })), {
     botDelay: 1000,
     knockMs: 7000,
@@ -239,7 +253,13 @@ function onConnection(ws) {
       case 'act': {
         if (!room || !room.game) return;
         const a = m.a || {};
-        if (a.type === 'nextRound' && !isHost() && room.host && room.host.ws) return err('Der Gastgeber startet die nächste Runde.');
+        if (a.type === 'nextRound') {
+          // Jeder Spieler bestätigt „Weiter“ – sind alle bereit, startet die nächste Runde
+          if (room.game.s.phase !== 'roundEnd') return;
+          room.ready = room.ready || new Set();
+          room.ready.add(me);
+          return tryNextRound(room);
+        }
         const e = room.game.act(seatIdx(), a);
         if (e) err(e);
         return;
@@ -259,6 +279,7 @@ function onConnection(ws) {
     sendRoom(r);
     if (r.game) {
       sendState(r);
+      tryNextRound(r);
       setTimeout(() => r.game && r.game.refresh(), RECONNECT_GRACE_MS + 100);
     }
     if (explicit) ws.send({ t: 'left' });

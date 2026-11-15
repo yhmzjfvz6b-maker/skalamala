@@ -707,3 +707,69 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .roundchip { font-family: var(--body); font-weight: 900; }
 
 .hand { align-content: safe center; }
+
+.version { font-size: .75rem; color: var(--muted); font-weight: 700; opacity: .8; }
+/* kleinere Karten im Sammelstapel */
+.pilerow { --sw: clamp(30px, 8vw, 40px); padding-top: 14px; }
+@media (min-width: 900px) { .pilerow { --sw: 42px; } }
+.spcards .card { margin-right: calc(var(--sw) * -.5); }
+.spcards .card .ci b { font-size: calc(var(--cw) * .36); }
+.spcards .card .cs { font-size: calc(var(--cw) * .44); }
+.spile { padding: 4px 6px 6px; border-radius: 12px; }
+.splbl { font-size: .66rem; }
+.spile.new { min-height: calc(var(--sw) * 1.42 + 24px); }
+
+/* Klopfen genehmigen (Spieler am Zug) */
+.knockprompt.approve { background: linear-gradient(180deg, #43d167, #158a34); box-shadow: 0 10px 0 #0b4d1d, 0 24px 60px rgba(0,0,0,.55); }
+.knockprompt.approve h3 { text-shadow: 0 3px 0 #0b4d1d; }
+
+/* ===== Neues Logo (Kärtchen-Schriftzug) & Emblem ===== */
+.logo { width: min(520px, 92vw); }
+@media (min-width: 900px) { .logo { width: min(560px, 42vw); } }
+.logo img, .lobbylogo { aspect-ratio: 1260 / 600 !important; }
+.lobbylogo { width: min(420px, 86vw); }
+.burst { width: 110%; }
+.toplogo { aspect-ratio: 220 / 260 !important; height: 46px; }
+@media (max-width: 600px) { .toplogo { height: 40px; } }
+.back img { width: 82%; top: 45%; transform: translate(-50%, -50%) rotate(-4deg); }
+
+/* ===== Verschiebbarer Trenner (PC/Tablet quer) ===== */
+.splitter { display: none; }
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
+  .main { grid-template-columns: minmax(0, 1fr) 14px var(--sidew, minmax(300px, 30%)) !important; gap: 0 !important; }
+  .main > .handzone { margin-right: 0; }
+  .splitter {
+    display: flex; align-items: center; justify-content: center; cursor: col-resize; touch-action: none;
+    margin: 0; border-radius: 8px; transition: background .15s;
+  }
+  .splitter span { width: 5px; height: 64px; border-radius: 3px; background: rgba(255,255,255,.35); box-shadow: 0 0 0 1px rgba(7,26,92,.4); transition: background .15s, height .15s; }
+  .splitter:hover span, .splitter.active span { background: var(--yellow); height: 110px; }
+  .splitter:hover, .splitter.active { background: rgba(255,210,63,.12); }
+}
+
+/* ===== Stapel & Ablage unten im Kartenfeld neben den Knöpfen ===== */
+.dockrow { display: flex; align-items: center; gap: 16px; }
+.dockpiles { flex: none; --pw: clamp(50px, 13vw, 66px); }
+.dockpiles .piles { padding: 0; gap: 10px; align-items: center; justify-content: flex-start; }
+.dockpiles .knockbox { position: static; transform: none; }
+.dockmain { flex: 1 1 auto; min-width: 0; }
+.dockslots { flex: none; }
+.dockslots .slots { flex-direction: column; align-items: flex-start; margin: 0; gap: 4px; }
+.side { gap: 0 !important; }
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
+  .dockpiles { --pw: clamp(74px, 6.2vw, 96px); }
+  .side .tablezone { flex: 1 1 0 !important; max-height: none !important; }
+}
+@media (max-width: 600px) {
+  .dockrow { gap: 8px; }
+  .dockpiles { --pw: 44px; }
+  .dockpiles .piles { gap: 6px; }
+  .dockpiles .pile .lbl { font-size: .62rem; padding: 0 5px; }
+  .dockslots { display: none; }
+  .dockmain .status { font-size: .82rem !important; line-height: 1.2; }
+  .dockmain .status.mine { font-size: .9rem !important; }
+  .dockmain .lastlog { display: none; }
+  .dockmain .actions { gap: 6px; padding: 4px 0 2px; }
+  .dockmain .actions .btn { min-height: 36px; font-size: .85rem; padding: .3em .7em; }
+  .side .tablezone { flex: none; max-height: 18vh !important; padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+}

@@ -105,6 +105,48 @@
       }
       return out;
     }
+    return arrangeRunWrap(cards, alt);
+  }
+
+  // Sequenz „rundherum“: König darf vor das Ass, z. B. D-K-A-2-3 (höchstens 13 Karten)
+  function arrangeRunWrap(cards, alt) {
+    const jokers = cards.filter((c) => c.joker);
+    const nat = cards.filter((c) => !c.joker);
+    if (!nat.length || cards.length > 13) return null;
+    if (!alt && nat.some((c) => c.suit !== nat[0].suit)) return null;
+    const r13 = (c) => (c.rank === 14 ? 1 : c.rank); // Ass = 1 … König = 13
+    for (let st = 1; st <= 13; st++) {
+      const pos = new Map();
+      let ok = true;
+      for (const c of nat) {
+        const p = ((r13(c) - st + 13) % 13) + st; // st … st+12
+        if (pos.has(p)) { ok = false; break; }
+        pos.set(p, c);
+      }
+      if (!ok) continue;
+      const ps = [...pos.keys()].sort((a, b) => a - b);
+      if (alt) {
+        const key = (p) => ((isRed(pos.get(p)) ? 1 : 0) + p) % 2;
+        if (ps.some((p) => key(p) !== key(ps[0]))) continue;
+      }
+      let lo = ps[0], hi = ps[ps.length - 1];
+      if (hi - lo + 1 > 13) continue;
+      const gaps = hi - lo + 1 - ps.length;
+      if (gaps > jokers.length) continue;
+      let extra = jokers.length - gaps;
+      while (extra > 0 && hi - lo + 1 < 13) { hi++; extra--; }
+      if (extra > 0) continue;
+      // nur „echte“ Rundherum-Folgen hier (lineare wurden oben schon geprüft)
+      const out = [];
+      let ji = 0;
+      for (let p = lo; p <= hi; p++) {
+        const n = ((p - 1) % 13) + 1;
+        const rank = n === 1 ? 14 : n;
+        if (pos.has(p)) out.push({ card: pos.get(p), rank });
+        else out.push({ card: jokers[ji++], rank });
+      }
+      return out;
+    }
     return null;
   }
 

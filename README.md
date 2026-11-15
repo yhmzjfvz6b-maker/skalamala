@@ -40,7 +40,8 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 |---|---|
 | `shared/engine.js` | Spielregeln, Punkte, Klopfen, Bot-KI, Spielleitung (läuft im Browser und auf dem Server) |
 | `server.js` | Online-Server: Webseite ausliefern, WebSocket, Räume, Wiederverbinden |
-| `public/` | Oberfläche (HTML, CSS, JavaScript), App-Manifest und Icon |
+| `public/` | Oberfläche (HTML, CSS, JavaScript), Logo (`logo.svg`), Emblem (`emblem.svg`), App-Manifest und Icons |
+| `tools/make_logo.py` | Erzeugt Logo und Emblem als SVG neu (Schrift in Pfade umgewandelt) |
 | `build.js` | `node build.js` erzeugt `dist/skalamala.html` – eine einzelne Datei nur für den Bot-Modus (ohne Server) |
 | `test/sim.js` | `node test/sim.js 100` simuliert 100 komplette Bot-Partien zum Testen |
 
@@ -64,7 +65,7 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 ### Annahmen, wo die Regeln nichts sagen (leicht änderbar in `shared/engine.js`)
 
 - **Die 9 zählt 5 Punkte** (Funktion `cardPoints`).
-- **Ass** in Sequenzen hoch (D-K-A) oder niedrig (A-2-3), aber nicht „herum" (K-A-2).
+- **Ass** in Sequenzen hoch (D-K-A) oder niedrig (A-2-3), auch rundherum (K-A-2, höchstens 13 Karten).
 - **Joker** sind beliebig einsetzbar, auch mehrere in einer Kombination. Joker können nicht aus Auslagen zurückgetauscht werden.
 - Beim **ersten Auslegen genau die Vorgabe** (z. B. Runde 1: genau Gruppe aus 3 + Sequenz aus 4). Nur wo „mind.“ steht (Runde 3, 7, 8), dürfen Kombinationen länger sein.
 - **Im selben Zug** danach nur bei Gegenspielern anlegen, an die eigenen Kombinationen erst ab dem nächsten Zug.
