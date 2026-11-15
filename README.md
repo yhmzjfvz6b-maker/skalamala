@@ -84,11 +84,11 @@ In `rooms.json` stehen Räume, die immer bestehen bleiben und nur für die einge
 
 ```json
 [
-  { "code": "RUMM", "name": "Rummel Club", "members": ["Yvonne", "Diana", "Ralf", "Norbert"] }
+  { "code": "RUMM", "name": "Rommy Club", "members": ["Yvonne", "Diana", "Ralf", "Norbert"] }
 ]
 ```
 
-Auf der Startseite erscheint dafür der Knopf „🎪 Rummel Club betreten“. Man kommt nur mit einem der eingetragenen Namen hinein (Groß-/Kleinschreibung egal). Der Code ist immer derselbe (RUMM). Ist eine halbe Stunde niemand mehr im Raum, wird er geleert, bleibt aber bestehen. Weitere Räume oder Mitglieder einfach in `rooms.json` ergänzen.
+Auf der Startseite erscheint dafür der Knopf „🎪 Rommy Club betreten“. Man kommt nur mit einem der eingetragenen Namen hinein (Groß-/Kleinschreibung egal). Der Code ist immer derselbe (RUMM). Ist eine halbe Stunde niemand mehr im Raum, wird er geleert, bleibt aber bestehen. Weitere Räume oder Mitglieder einfach in `rooms.json` ergänzen.
 
 ## Sprachen
 
