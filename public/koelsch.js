@@ -281,6 +281,7 @@
     [/Das laufende Spiel gegen die Bots wird beendet\./g, 'The current game against the bots will end.'],
     [/Weiterspielen/g, 'Keep playing'], [/Ja, verlassen/g, 'Yes, leave'], [/Wenigste Punkte gewinnen\./g, 'Fewest points win.'],
     [/^Ton$/g, 'Sound'], [/Musik/g, 'Music'], [/Geräusche/g, 'Sound effects'], [/ Lautstärke/g, ' volume'],
+    [/^Tippen zum Schließen$/g, 'Tap to close'],
     [/^Menü$/g, 'Menu'], [/^Verlauf$/g, 'History'], [/^Schließen$/g, 'Close'],
     [/ – (.+?) gibt, (.+?) beginnt\./g, ' – $1 deals, $2 starts.'], [/Runde (\d+):/g, 'Round $1:'], [/^Geber$/g, 'Dealer'],
     [new RegExp(N + ' legt aus: ', 'g'), '$1 melds: '],

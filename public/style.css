@@ -1073,3 +1073,16 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .dockpiles { --pw: clamp(58px, 15vw, 76px); }
 @media (min-width: 900px), (orientation: landscape) and (min-width: 640px) { .dockpiles { --pw: clamp(88px, 7.4vw, 116px); } }
 @media (max-width: 600px) { .dockpiles { --pw: 54px; } }
+/* 1.54: Auslage und Sammelstapel größer; vergrößerte Ansicht per Antippen/Gedrückthalten */
+:root { --mw: clamp(36px, 8.6vw, 54px); }
+@media (min-width: 900px) { :root { --mw: 64px; } }
+.pilerow { --sw: clamp(44px, 11.5vw, 60px); }
+@media (min-width: 900px) { .pilerow { --sw: 70px; } }
+#zoom { position: fixed; inset: 0; z-index: 9500; background: rgba(4,12,48,.72); display: grid; place-items: center; padding: 16px; animation: zin .15s ease-out; cursor: zoom-out; }
+@keyframes zin { from { opacity: 0; } }
+#zoom .zbox { max-width: 96vw; text-align: center; }
+#zoom .ztitle { color: #ffd23f; font-family: 'Lilita One', var(--display); font-size: 1.3rem; margin-bottom: 12px; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
+#zoom .zcards { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; --cw: min(15vw, 120px); }
+#zoom .zcards .card { --cw: min(15vw, 120px); margin: 0; }
+#zoom .zhint { color: #fff; opacity: .7; font-size: .8rem; margin-top: 12px; }
+.meld { cursor: zoom-in; }
