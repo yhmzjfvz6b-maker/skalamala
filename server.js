@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, version: '1.32', rooms: rooms.size }));
+    return res.end(JSON.stringify({ ok: true, version: '1.33', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');
@@ -104,6 +104,16 @@ server.on('upgrade', (req, socket) => {
 const rooms = new Map();
 const BOT_NAMES = ['Sabine', 'Hennes', 'Tünnes', 'Schäl', 'Mariechen', 'Jupp', 'Kättchen', 'Pitter', 'Billa', 'Fritz'];
 
+// Feste Räume (rooms.json): bleiben immer bestehen, nur für die eingetragenen Mitglieder
+function loadFixedRooms() {
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(path.join(__dirname, 'rooms.json'), 'utf8')); } catch (e) { list = []; }
+  for (const f of list) {
+    const code = String(f.code || '').toUpperCase().trim();
+    if (!/^[A-Z]{4}$/.test(code) || !Array.isArray(f.members) || !f.members.length) continue;
+    rooms.set(code, { code, title: String(f.name || code), fixed: true, members: f.members.map(String), host: null, seats: [], game: null, created: Date.now(), emptySince: 0, tips: f.tips !== false });
+  }
+}
 function newCode() {
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let c;
@@ -115,6 +125,7 @@ const cleanName = (n) => String(n || '').replace(/[<>]/g, '').trim().slice(0, 16
 function roomInfo(room, seat) {
   return {
     code: room.code, host: room.seats.indexOf(room.host), you: seat, started: !!room.game, tips: !!room.tips,
+    title: room.title || '', fixed: !!room.fixed, members: room.members || [],
     seats: room.seats.map((s) => ({ name: s.name, bot: s.bot, connected: s.bot || !!s.ws })),
   };
 }
@@ -210,6 +221,18 @@ function onConnection(ws) {
         if (room) return err('Du bist schon in einem Raum.');
         const r = rooms.get(String(m.code || '').toUpperCase().trim());
         if (!r) return err('Raum nicht gefunden. Code prüfen!');
+        if (r.fixed) {
+          // Fester Raum: nur Mitglieder, der Name wird zur eingetragenen Schreibweise
+          const mem = r.members.find((x) => x.toLowerCase() === cleanName(m.name).toLowerCase());
+          if (!mem) return err(`Der ${r.title} ist nur für ${r.members.join(', ')}. Bitte deinen Namen genau so eingeben.`);
+          const own = r.seats.find((s) => !s.bot && s.name === mem);
+          if (own) return attach(r, own);
+          if (r.game) return err('Das Spiel in diesem Raum läuft bereits.');
+          if (r.seats.length >= MAX_PLAYERS) return err('Der Raum ist voll.');
+          const ns = newSeat(mem);
+          r.seats.push(ns);
+          return attach(r, ns);
+        }
         // Wiederverbinden per Token oder gleichem Namen
         let st = m.token ? r.seats.find((s) => s.token === m.token) : null;
         if (!st) st = r.seats.find((s) => !s.bot && !s.ws && s.name.toLowerCase() === cleanName(m.name).toLowerCase());
@@ -300,10 +323,15 @@ setInterval(() => {
     const anyone = r.seats.some((s) => !s.bot && s.ws);
     if (anyone) { r.emptySince = 0; r.seats.forEach((s) => s.ws && s.ws.ping()); continue; }
     if (!r.emptySince) r.emptySince = now;
-    if (now - r.emptySince > 30 * 60 * 1000) { if (r.game) r.game.destroy(); rooms.delete(code); }
+    if (now - r.emptySince > 30 * 60 * 1000) {
+      if (r.game) r.game.destroy();
+      if (r.fixed) { r.game = null; r.seats = []; r.host = null; r.emptySince = 0; } // fester Raum bleibt, wird nur geleert
+      else rooms.delete(code);
+    }
   }
 }, 25000);
 
+loadFixedRooms();
 server.listen(PORT, () => {
   console.log(`Skalamala-Server läuft auf http://localhost:${PORT}`);
 });

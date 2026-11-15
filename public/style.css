@@ -1019,3 +1019,4 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .card.s-D .csg b { top: 50%; }
 .card.s-S .csg b { top: 46%; }
 .card.s-C .csg b { top: 46%; }
+.fixedroom { margin: 0 0 12px; } .fixedroom .btn { width: 100%; }

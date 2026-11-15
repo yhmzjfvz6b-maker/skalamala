@@ -77,3 +77,15 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 - **Klopfen dürfen** nur Spieler, die noch nicht ausgelegt haben, nicht der, der die Karte gerade abgeworfen hat, und nur solange noch genug Karten im Stapel sind.
 - **Stapel leer:** Die Ablage wird einmal neu gemischt. Ist der Stapel ein zweites Mal leer, endet die Runde und alle zählen ihre Handkarten (sonst könnte eine Runde endlos laufen).
 - Online übernimmt ein Bot den Platz, wenn ein Spieler länger als 20 Sekunden getrennt ist. Kommt er zurück (gleicher Name oder gleiches Gerät), spielt er sofort weiter.
+
+## Feste Räume
+
+In `rooms.json` stehen Räume, die immer bestehen bleiben und nur für die eingetragenen Mitglieder offen sind:
+
+```json
+[
+  { "code": "RUMM", "name": "Rummel Club", "members": ["Yvonne", "Diana", "Ralf", "Norbert"] }
+]
+```
+
+Auf der Startseite erscheint dafür der Knopf „🎪 Rummel Club betreten“. Man kommt nur mit einem der eingetragenen Namen hinein (Groß-/Kleinschreibung egal). Der Code ist immer derselbe (RUMM). Ist eine halbe Stunde niemand mehr im Raum, wird er geleert, bleibt aber bestehen. Weitere Räume oder Mitglieder einfach in `rooms.json` ergänzen.

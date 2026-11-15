@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.32 · 15.11.2026';
+  const VERSION = '1.33 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -277,8 +277,7 @@
     }
     if (v.current === v.seat && v.phase === 'draw' && v.knock.first != null && !(prev && prev.knock && prev.knock.first != null && prev.current === v.current && prev.phase === 'draw')) ui.approveStart = Date.now();
     ui.lastTurnKey = turnKey;
-    if (window.Koelsch && ui.lang === 'ksh') window.Koelsch.enable(true);
-  render();
+    render();
     // Rundenende
     if ((v.phase === 'roundEnd' || v.phase === 'gameEnd') && (!prev || prev.phase !== v.phase || prev.round !== v.round)) showRoundEnd();
     else if (v.phase === 'roundEnd' && ui.modalKind === 'roundEnd' && v.multi) showRoundEnd();
@@ -336,6 +335,11 @@
         <h2>Online gegen echte Gegner</h2>
         ${ui.onlineAvailable ? `
           ${sess ? `<div class="row" style="margin-bottom:12px"><button class="btn green" data-a="rejoin">↩︎ Zurück in Raum ${esc(sess.code)}</button></div>` : ''}
+          ${(ui.fixedRooms || []).map((f) => `
+          <div class="fixedroom">
+            <button class="btn green" data-a="joinFixed" data-code="${esc(f.code)}">🎪 ${esc(f.name)} betreten</button>
+            <div class="hint" style="margin:4px 0 0">Fester Raum für ${esc(f.members.join(', '))} · Code <b data-nok>${esc(f.code)}</b></div>
+          </div>`).join('')}
           <div class="row grow">
             <button class="btn primary" data-a="create">Raum erstellen</button>
           </div>
@@ -371,8 +375,10 @@
     <div class="home lobby">
       <img class="lobbylogo" src="${LOGO}" alt="Skalamala">
       <div class="panel">
-        <h2>Raumcode</h2>
+        ${r.fixed ? `<h2>🎪 ${esc(r.title)}</h2>` : ''}
+        <h2${r.fixed ? ' style="font-size:1rem;opacity:.8"' : ''}>Raumcode</h2>
         <div class="code">${esc(r.code)}</div>
+        ${r.fixed ? (() => { const miss = r.members.filter((n) => !r.seats.some((s) => s.name === n && s.connected)); return miss.length ? `<p class="hint" style="text-align:center">Fehlt noch: ${esc(miss.join(', '))}</p>` : '<p class="hint" style="text-align:center">Alle Mitglieder sind da! 🎉</p>'; })() : ''}
         <div class="row" style="justify-content:center"><button class="btn small ghost" data-a="copyLink" data-link="${esc(link)}">🔗 Einladungslink kopieren</button></div>
         <div class="row" style="justify-content:center;margin:6px 0 2px">
           ${isHost ? `<div class="modesel"><button class="btn small ${r.tips ? 'on' : ''}" data-a="roomTips" data-v="1">💡 Mit Tipps</button><button class="btn small ${!r.tips ? 'on' : ''}" data-a="roomTips" data-v="0">🏆 Turnier</button></div>`
@@ -936,6 +942,18 @@
         ui.room = null; go('lobby');
         ui.ctl = new OnlineCtl({ t: 'create', name: ui.name, tips: ui.tips });
         return;
+      case 'joinFixed': {
+        if (!needName()) return;
+        const f = (ui.fixedRooms || []).find((x) => x.code === el.dataset.code);
+        if (!f) return;
+        const mem = f.members.find((x) => x.toLowerCase() === ui.name.toLowerCase());
+        if (!mem) return toast(`Der ${f.name} ist nur für ${f.members.join(', ')} – bitte oben deinen Namen genau so eingeben.`, 4000);
+        ui.name = mem; store.set('name', mem);
+        const sess = store.get('session', null);
+        ui.room = null; go('lobby');
+        ui.ctl = new OnlineCtl({ t: 'join', code: f.code, name: mem, token: sess && sess.code === f.code ? sess.token : undefined });
+        return;
+      }
       case 'join': {
         if (!needName()) return;
         const code = (document.getElementById('code').value || '').trim().toUpperCase();
@@ -1048,10 +1066,11 @@
 
   window.__skalamala = ui; // für Tests
   // ---------- Start ----------
+  if (window.Koelsch && ui.lang === 'ksh') window.Koelsch.enable(true);
   render();
   if (/^https?:$/.test(location.protocol)) {
     fetch('api/ping', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {
-      if (j && j.ok) { ui.onlineAvailable = true; if (ui.screen === 'home') render(); }
+      if (j && j.ok) { ui.onlineAvailable = true; ui.fixedRooms = j.fixed || []; if (ui.screen === 'home') render(); }
     }).catch(() => {});
   }
 })();
