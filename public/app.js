@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.40 · 15.11.2026';
+  const VERSION = '1.41 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -70,8 +70,6 @@
   // Eigene Reihenfolge (per Ziehen) oder automatisch sortiert
   function orderedHand(cards, round) {
     if (ui.sort === 'custom' && ui.orderRound !== round) { ui.sort = store.get('sort', 'suit'); }
-    const altRound = E.ROUNDS[round] && E.ROUNDS[round].slots.some((x) => x.t === 'A');
-    if (ui.sort === 'alt' && !altRound) ui.sort = store.get('sort', 'suit') === 'alt' ? 'suit' : store.get('sort', 'suit');
     if (ui.sort !== 'custom') return sortHand(cards, ui.sort);
     const pos = new Map(ui.order.map((id, i) => [id, i]));
     const key = (c) => (pos.has(c.id) ? pos.get(c.id) : 1e6 + c.id);
@@ -623,7 +621,7 @@
             <span>
               <button class="btn small sortbtn ${ui.sort === 'suit' ? 'on' : ''}" data-a="sortSuit">Farbe</button>
               <button class="btn small sortbtn ${ui.sort === 'rank' ? 'on' : ''}" data-a="sortRank">Wert</button>
-              ${R.slots.some((x) => x.t === 'A') ? `<button class="btn small sortbtn ${ui.sort === 'alt' ? 'on' : ''}" data-a="sortAlt">Rot/Schwarz</button>` : ''}
+              <button class="btn small sortbtn ${ui.sort === 'alt' ? 'on' : ''}" data-a="sortAlt" title="Für Runde 5 (Skalamala): rot und schwarz abwechselnd">Rot/Schwarz</button>
               ${ui.selected.length ? '<button class="btn small danger" data-a="clearSel" aria-label="Auswahl aufheben">✕</button>' : ''}
             </span>
           </div>
@@ -1138,7 +1136,7 @@
         });
       case 'sortSuit': ui.sort = 'suit'; store.set('sort', 'suit'); return render();
       case 'sortRank': ui.sort = 'rank'; store.set('sort', 'rank'); return render();
-      case 'sortAlt': ui.sort = 'alt'; return render();
+      case 'sortAlt': ui.sort = 'alt'; store.set('sort', 'alt'); return render();
       case 'clearSel': ui.selected = []; return render();
       case 'drawStock': return ui.ctl.act({ type: 'drawStock' });
       case 'rejectKnock': return ui.ctl.act({ type: 'rejectKnock' });
