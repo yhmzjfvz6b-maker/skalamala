@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.31 · 15.11.2026';
+  const VERSION = '1.32 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -151,6 +151,7 @@
     bots: store.get('bots', 2),
     knockPrompt: store.get('knockPrompt', true),
     tips: store.get('tips', true),
+    lang: store.get('lang', 'de'),
     sort: store.get('sort', 'suit'),
     sideW: store.get('sideW', 0),
     order: [], orderRound: -1, dragging: false, pendingRender: false,
@@ -276,7 +277,8 @@
     }
     if (v.current === v.seat && v.phase === 'draw' && v.knock.first != null && !(prev && prev.knock && prev.knock.first != null && prev.current === v.current && prev.phase === 'draw')) ui.approveStart = Date.now();
     ui.lastTurnKey = turnKey;
-    render();
+    if (window.Koelsch && ui.lang === 'ksh') window.Koelsch.enable(true);
+  render();
     // Rundenende
     if ((v.phase === 'roundEnd' || v.phase === 'gameEnd') && (!prev || prev.phase !== v.phase || prev.round !== v.round)) showRoundEnd();
     else if (v.phase === 'roundEnd' && ui.modalKind === 'roundEnd' && v.multi) showRoundEnd();
@@ -307,6 +309,13 @@
         <div class="field">
           <label for="name">Dein Name</label>
           <input id="name" class="input" maxlength="16" placeholder="z. B. Sabine" value="${esc(ui.name)}" autocomplete="nickname">
+        </div>
+        <div class="field">
+          <label>Sprache</label>
+          <div class="modesel" data-nok>
+            <button class="btn small ${ui.lang !== 'ksh' ? 'on' : ''}" data-a="langDe">Hochdeutsch</button>
+            <button class="btn small ${ui.lang === 'ksh' ? 'on' : ''}" data-a="langKsh">Op Kölsch 🍺</button>
+          </div>
         </div>
         <div class="field">
           <label>Spielmodus</label>
@@ -955,6 +964,12 @@
       case 'kick': return ui.ctl.send({ t: 'kick', seat: +el.dataset.seat });
       case 'start': return ui.ctl.send({ t: 'start' });
       case 'roomTips': return ui.ctl.send({ t: 'tips', on: el.dataset.v === '1' });
+      case 'langDe': case 'langKsh': {
+        ui.lang = a === 'langKsh' ? 'ksh' : 'de'; store.set('lang', ui.lang);
+        if (window.Koelsch) window.Koelsch.enable(ui.lang === 'ksh');
+        if (ui.modalKind || document.querySelector('.modal')) closeModal();
+        return render();
+      }
       case 'modeTips': case 'modeTour':
         ui.tips = a === 'modeTips'; store.set('tips', ui.tips); return render();
       case 'tipApply': {
@@ -973,6 +988,7 @@
       case 'menu':
         return openModal(`<button class="btn small ghost close" data-close>Schließen</button><h2>Menü</h2>
           <label class="toggle"><input type="checkbox" id="kp2" ${ui.knockPrompt ? 'checked' : ''}> Bei fremden Zügen fragen, ob ich klopfen will</label>
+          <div class="row" style="margin-top:10px"><span>Sprache</span><div class="modesel" data-nok><button class="btn small ${ui.lang !== 'ksh' ? 'on' : ''}" data-a="langDe">Hochdeutsch</button><button class="btn small ${ui.lang === 'ksh' ? 'on' : ''}" data-a="langKsh">Op Kölsch 🍺</button></div></div>
           <div class="row" style="margin-top:14px"><button class="btn small" data-a="rules">📜 Spielregeln</button></div>
           <h3>Verlauf</h3><ul class="loglist">${v.log.slice().reverse().map((l) => `<li>${esc(l.msg)}</li>`).join('')}</ul>
           <div class="divider"></div><button class="btn danger" data-a="leave">Spiel verlassen</button><p class="hint">Version ${VERSION}</p>`, (e) => {
