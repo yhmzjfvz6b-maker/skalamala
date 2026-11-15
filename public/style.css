@@ -1067,3 +1067,9 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .spcards .card.joker .jci.br, .meld .card.joker .jci.br, .staged .card.joker .jci.br, .res .card.joker .jci.br { display: none !important; }
 .spcards .card.joker > .ci, .meld .card.joker:not(.jrep) > .ci, .staged .card.joker > .ci, .res .card.joker > .ci { display: none !important; }
 .meld .card.joker:not(.jrep) .rep, .staged .card.joker .rep { top: 50%; left: 9%; font-size: calc(var(--cw) * .3); }
+/* 1.52: Sammelstapel und Ablage größer */
+.pilerow { --sw: clamp(40px, 10.5vw, 54px); }
+@media (min-width: 900px) { .pilerow { --sw: 62px; } }
+.dockpiles { --pw: clamp(58px, 15vw, 76px); }
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) { .dockpiles { --pw: clamp(88px, 7.4vw, 116px); } }
+@media (max-width: 600px) { .dockpiles { --pw: 54px; } }
