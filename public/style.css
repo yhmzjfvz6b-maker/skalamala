@@ -1031,3 +1031,7 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .sndrow .btn { min-width: 132px; justify-content: flex-start; }
 .sndrow .btn:not(.on) { opacity: .7; }
 .sndrow input[type=range] { flex: 1; accent-color: #ffd23f; min-width: 80px; }
+/* 1.38: kleines S im Farbsymbol – kleiner, weißes Kärtchen mit schwarzem Rahmen */
+.card .csg b { font-size: .2em; -webkit-text-stroke: 0; color: #e3262b; background: #fff;
+  border: max(1px, .06em) solid #111; border-radius: .14em; padding: .05em .16em .02em; line-height: 1;
+  transform: translate(-50%, -50%) rotate(-10deg); }
