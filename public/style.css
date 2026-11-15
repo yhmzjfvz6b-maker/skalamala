@@ -1013,3 +1013,9 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .card.s-S .csg b { top: 50%; left: 50%; }
 .card.s-C .csg b { top: 52%; left: 50%; }
 .card .csg b { -webkit-text-stroke-width: max(1.2px, .035em); }
+/* 1.31: S im Farbsymbol kleiner, Höhe je Farbe angepasst */
+.card .csg b { font-size: .27em; }
+.card.s-H .csg b { top: 47%; }
+.card.s-D .csg b { top: 50%; }
+.card.s-S .csg b { top: 46%; }
+.card.s-C .csg b { top: 46%; }
