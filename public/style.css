@@ -946,3 +946,24 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 @keyframes tipglow { 50% { outline-color: rgba(255,210,63,.35); outline-offset: 6px; } }
 .meld.tipm { outline: 3px solid #ffd23f; outline-offset: 2px; border-radius: 10px; }
 @media (max-width: 700px) { .tipbar { font-size: .78rem; padding: 5px 9px; margin-bottom: 4px; } }
+/* 1.27: Spiegelbild unten (Wert unten rechts, S unten links), S kleiner, Joker mit gekröntem S in den Ecken */
+.card .ci.br { display: flex !important; top: auto; left: auto; bottom: 6%; right: 9%; transform: rotate(180deg); }
+.stile { width: calc(var(--cw) * .21); height: calc(var(--cw) * .27); font-size: calc(var(--cw) * .17);
+  border-width: max(1.5px, calc(var(--cw) * .022)); top: 7%; right: 9%; bottom: auto; left: auto; transform: rotate(10deg); }
+.stile.b { top: auto; right: auto; bottom: 7%; left: 9%; transform: rotate(190deg); }
+.card .cs, .knockprompt .card .cs { font-size: calc(var(--cw) * .5); padding: 0; }
+.meld .card .ci.br, .staged .card .ci.br, .spcards .card .ci.br, .res .card .ci.br { display: none !important; }
+.meld .card .stile, .staged .card .stile, .spcards .card .stile, .res .card .stile { display: none !important; }
+.meld .card .cs, .staged .card .cs, .spcards .card .cs { padding: 36% 0 0 30%; }
+/* Joker */
+.card.joker .jci { position: absolute; z-index: 2; top: 5%; left: 7%; width: calc(var(--cw) * .27); line-height: 0; }
+.card.joker .jci img { width: 100%; height: auto; }
+.card.joker .jci.br { top: auto; left: auto; bottom: 5%; right: 7%; transform: rotate(180deg); }
+.card.joker > .ci { display: none !important; }
+.card.joker .jk img { width: 54%; margin-top: -6%; }
+.card.joker .jk em { bottom: 21%; }
+.meld .card.joker .jci, .staged .card.joker .jci, .spcards .card.joker .jci, .res .card.joker .jci { display: none; }
+.meld .card.joker > .ci, .staged .card.joker > .ci, .spcards .card.joker > .ci, .res .card.joker > .ci { display: flex !important; }
+.card.joker .jci { width: calc(var(--cw) * .23); }
+.card.joker .jk img { width: 48%; margin-top: -22%; }
+.card.joker .jk em { bottom: 29%; font-size: calc(var(--cw) * .14); }
