@@ -994,3 +994,14 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
   .handzone .knockprompt .thumb { width: 46px; height: 46px; font-size: 1.4rem; }
 }
 .knockprompt .card .ci.br, .knockprompt .card .stile.b, .knockprompt .card.joker .jci.br { display: none !important; }
+/* 1.29: S unten aufrecht, nach links geneigt; kleines S im Farbsymbol */
+.stile.b { transform: rotate(-12deg); }
+.card .csg { position: relative; display: inline-block; line-height: 1; }
+.card .csg b { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%) rotate(-8deg);
+  font-family: 'Inter', var(--display); font-weight: 900; font-size: .3em; line-height: 1; color: #fff;
+  text-shadow: 0 0 2px rgba(0,0,0,.25); }
+.card.s-H .csg b { top: 44%; }
+.card.s-D .csg b { top: 51%; }
+.card.s-S .csg b { top: 55%; }
+.card.s-C .csg b { top: 54%; }
+.meld .card .csg b, .staged .card .csg b, .spcards .card .csg b, .res .card .csg b { display: none; }
