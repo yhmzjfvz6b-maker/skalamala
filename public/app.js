@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.42 · 15.11.2026';
+  const VERSION = '1.43 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -295,8 +295,8 @@
     else {
       const old = new Set(prev.hand.map((c) => c.id));
       const added = v.hand.filter((c) => !old.has(c.id)).map((c) => c.id);
+      // NEU bleibt stehen, bis neue Karten dazukommen (z. B. geklopfte Karte + Strafkarte bis zum nächsten Ziehen)
       if (added.length) ui.newIds = added;
-      else if (v.current === v.seat && v.phase === 'draw' && prev.phase !== 'draw') ui.newIds = [];
       // vom Server gemeldet, was ich zuletzt bekommen habe (z. B. geklopfte Karte + Strafkarte)
       if (v.gotSeq && v.gotSeq !== prev.gotSeq && v.got && v.got.length) ui.newIds = v.got.slice();
       playEvents(prev, v);
