@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.27 · 15.11.2026';
+  const VERSION = '1.28 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -573,14 +573,14 @@
               <div class="dockslots">${slots}</div>
             </div>
           </div>
+          ${renderKnockPrompt(v)}${renderApprovePrompt(v)}
         </div>
         <div class="splitter" id="splitter" title="Ziehen, um die Breite zu ändern (Doppelklick: zurücksetzen)" aria-label="Breite ändern" role="separator"><span></span></div>
         <div class="side">
           <div class="tablezone">${meldArea}</div>
         </div>
       </div>
-    </div>
-    ${renderKnockPrompt(v)}${renderApprovePrompt(v)}`;
+    </div>`;
     layoutHand();
   }
 
@@ -589,27 +589,29 @@
     if (v.current !== v.seat || v.phase !== 'draw' || v.knock.first == null || !v.discardTop) return '';
     const who = v.players[v.knock.first].name;
     return `<div class="knockprompt approve">
-      <h3>${esc(who)} klopft!</h3>
-      ${cardHTML(v.discardTop)}
+      <div class="kpcard">${cardHTML(v.discardTop)}</div>
+      <div class="kpmid">
+        <h3>${esc(who)} klopft!</h3>
+        <div class="kpinfo">👍 Karte + Strafkarte für ${esc(who)} · 👎 du ziehst normal, keine Strafkarte</div>
+        <div class="bar"><i id="abar"></i></div>
+      </div>
       <div class="thumbs">
-        <button class="thumb up" data-a="drawStock" aria-label="Zustimmen" title="Zustimmen: ${esc(who)} bekommt die Karte + 1 Strafkarte">👍</button>
+        <button class="thumb up" data-a="drawStock" aria-label="Zustimmen" title="Zustimmen: ${esc(who)} bekommt die Karte + 1 Strafkarte, du ziehst verdeckt. Ohne Antwort wird automatisch zugestimmt.">👍</button>
         <button class="thumb down" data-a="rejectKnock" aria-label="Ablehnen" title="Ablehnen: niemand bekommt die Karte – du ziehst ganz normal (offen oder verdeckt)">👎</button>
       </div>
-      <div class="bar"><i id="abar"></i></div>
-      <div style="font-size:.82rem;opacity:.95">👍 ${esc(who)} bekommt die Karte + Strafkarte, du ziehst verdeckt.<br>👎 Abgelehnt – du nimmst offen oder verdeckt, ohne Strafkarte.</div>
-      <div style="font-size:.78rem;opacity:.8;margin-top:4px">Ohne Antwort wird automatisch zugestimmt.</div>
     </div>`;
   }
 
   function renderKnockPrompt(v) {
     if (v.phase !== 'knock' || !v.knock.pending.includes(v.seat) || !ui.knockPrompt) return '';
     return `<div class="knockprompt">
-      <h3>Klopfen?</h3>
-      <div style="color:var(--muted);font-size:.9rem">${esc(v.players[v.current].name)} will die Karte nicht.</div>
-      ${cardHTML(v.discardTop)}
-      <div style="font-size:.88rem">Du bekommst die Karte <b>plus 1 verdeckte Strafkarte</b>.</div>
-      <div class="bar"><i id="kbar"></i></div>
-      <div class="row grow"><button class="btn white" data-a="pass">Passen</button><button class="btn primary" data-a="knock">👊 Klopfen</button></div>
+      <div class="kpcard">${cardHTML(v.discardTop)}</div>
+      <div class="kpmid">
+        <h3>Klopfen?</h3>
+        <div class="kpinfo">${esc(v.players[v.current].name)} will sie nicht · du bekommst sie <b>+ 1 Strafkarte</b></div>
+        <div class="bar"><i id="kbar"></i></div>
+      </div>
+      <div class="kpbtns"><button class="btn primary" data-a="knock">👊 Klopfen</button><button class="btn white small" data-a="pass">Passen</button></div>
     </div>`;
   }
   setInterval(() => {

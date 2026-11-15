@@ -967,3 +967,30 @@ table.scores tr.best td { color: var(--yellow); font-weight: 900; }
 .card.joker .jci { width: calc(var(--cw) * .23); }
 .card.joker .jk img { width: 48%; margin-top: -22%; }
 .card.joker .jk em { bottom: 29%; font-size: calc(var(--cw) * .14); }
+/* 1.28: Klopf-Fenster kompakt unten über der Steuerleiste */
+.handzone { position: relative; }
+.handzone .knockprompt {
+  position: absolute; top: auto; bottom: 6px; left: 50%; transform: translateX(-50%);
+  width: min(600px, calc(100% - 12px)); padding: 8px 12px; border-width: 3px; border-radius: 18px;
+  display: flex; align-items: center; gap: 12px; text-align: left; animation: popb .2s ease-out;
+  box-shadow: 0 5px 0 #6e0b10, 0 12px 30px rgba(0,0,0,.5);
+}
+.handzone .knockprompt.approve { box-shadow: 0 5px 0 #0b4d1d, 0 12px 30px rgba(0,0,0,.5); }
+@keyframes popb { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.knockprompt .kpcard { flex: none; line-height: 0; }
+.handzone .knockprompt .card, .handzone .knockprompt.approve .card { --cw: 48px; margin: 0; }
+.knockprompt .kpmid { flex: 1; min-width: 0; }
+.handzone .knockprompt h3 { font-size: 1.3rem; margin: 0; line-height: 1.1; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.knockprompt .kpinfo { font-size: .78rem; line-height: 1.25; opacity: .95; margin-top: 2px; }
+.handzone .knockprompt .bar { margin: 6px 0 0; height: 6px; }
+.handzone .knockprompt .thumbs { margin: 0; gap: 10px; flex: none; }
+.handzone .knockprompt .thumb { width: 54px; height: 54px; font-size: 1.7rem; border-width: 3px; }
+.knockprompt .kpbtns { display: flex; flex-direction: column; gap: 6px; flex: none; }
+@media (max-width: 520px) {
+  .handzone .knockprompt { gap: 8px; padding: 6px 8px; }
+  .handzone .knockprompt .card { --cw: 38px; }
+  .handzone .knockprompt h3 { font-size: 1.05rem; }
+  .knockprompt .kpinfo { font-size: .7rem; }
+  .handzone .knockprompt .thumb { width: 46px; height: 46px; font-size: 1.4rem; }
+}
+.knockprompt .card .ci.br, .knockprompt .card .stile.b, .knockprompt .card.joker .jci.br { display: none !important; }
