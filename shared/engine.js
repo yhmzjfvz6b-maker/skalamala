@@ -11,7 +11,8 @@
   const SUIT_NAME = { S: 'Pik', H: 'Herz', D: 'Karo', C: 'Kreuz' };
   const RANK_LABEL = { 11: 'B', 12: 'D', 13: 'K', 14: 'A' };
   const isRed = (c) => c.suit === 'H' || c.suit === 'D';
-  const rankLabel = (r) => RANK_LABEL[r] || String(r === 1 ? 'A' : r);
+  const normPos = (r) => (r > 14 ? ((r - 1) % 13) + 1 : r < 1 ? r + 13 : r); // Rundherum-Positionen → 1…14
+  const rankLabel = (r) => { r = normPos(r); return RANK_LABEL[r] || String(r === 1 ? 'A' : r); };
   const cardLabel = (c) => (c.joker ? 'Joker' : SUIT_SYM[c.suit] + rankLabel(c.rank));
 
   // Punkte: 2–9 = 5, 10–König = 10, Ass = 20, Joker = 50
@@ -61,7 +62,7 @@
 
   // ---------- Kombinationen prüfen ----------
   // Ordnet eine Sequenz. alt=true: Farben abwechselnd rot/schwarz, beliebige Farben (Pik/Herz…)
-  function arrangeRun(cards, alt) {
+  function arrangeRun(cards, alt, pref) {
     const jokers = cards.filter((c) => c.joker);
     const nat = cards.filter((c) => !c.joker);
     // Joker sind beliebig einsetzbar – auch eine Sequenz nur aus Jokern ist erlaubt
@@ -94,6 +95,8 @@
       const gaps = hi - lo + 1 - ps.length;
       if (gaps > jokers.length) continue;
       let extra = jokers.length - gaps;
+      // übrige Joker: an das gewünschte Ende (pref 'low' = vorne), sonst hinten
+      if (pref === 'low') { while (extra > 0 && lo > 1) { lo--; extra--; } }
       while (extra > 0 && hi < 14) { hi++; extra--; }
       while (extra > 0 && lo > 1) { lo--; extra--; }
       if (extra > 0) continue;
@@ -150,7 +153,7 @@
     return null;
   }
 
-  function validMeld(cards, t, min) {
+  function validMeld(cards, t, min, pref) {
     min = min || 0;
     if (cards.length < Math.max(min, 1)) return null;
     // Immer mindestens eine echte Karte mehr als Joker (2 Karten + 1 Joker, 3 Karten + 2 Joker …)
@@ -162,25 +165,60 @@
       const r = nat.length ? nat[0].rank : 0; // nur Joker: Wert noch offen
       return nat.concat(cards.filter((c) => c.joker)).map((c) => ({ card: c, rank: r }));
     }
-    if (t === 'S' || t === 'A') return arrangeRun(cards, t === 'A');
+    if (t === 'S' || t === 'A') return arrangeRun(cards, t === 'A', pref);
     return null;
   }
 
   // Anlegen an eine Kombination. Eine einzelne Karte, die genau den Platz eines Jokers trifft,
   // ersetzt den Joker – der Joker geht zurück auf die Hand.
-  const sameRank = (a, b) => a === b || (a === 1 && b === 14) || (a === 14 && b === 1);
-  function layOffResult(m, cards) {
+  const r13 = (x) => { x = normPos(x); return x === 14 ? 1 : x; };
+  const sameRank = (a, b) => r13(a) === r13(b);
+  // Eine Karte an ein Ende einer Sequenz legen – die vorhandenen Karten (auch Joker) behalten ihren Platz
+  function extendRun(m, c, pos) {
+    const n = m.cards.length, lo = m.ranks[0], hi = m.ranks[n - 1];
+    const nat = m.cards.map((x, i) => ({ x, p: m.ranks[i] })).filter((o) => !o.x.joker);
+    if (!nat.length) return null;
+    const nj = m.cards.filter((x) => x.joker).length + (c.joker ? 1 : 0);
+    if (n + 1 - nj <= nj) return null;
+    const ends = pos === 'start' ? ['start', 'end'] : ['end', 'start'];
+    for (const e of ends) {
+      const p = e === 'start' ? lo - 1 : hi + 1;
+      const nlo = Math.min(lo, p), nhi = Math.max(hi, p);
+      if (nhi - nlo + 1 > ((nlo >= 1 && nhi <= 14) ? 14 : 13)) continue;
+      if (!c.joker) {
+        if (!sameRank(c.rank, p)) continue;
+        if (m.t === 'S' && c.suit !== nat[0].x.suit) continue;
+        if (m.t === 'A' && (isRed(c) === isRed(nat[0].x)) !== (Math.abs(p - nat[0].p) % 2 === 0)) continue;
+      }
+      const cardsN = e === 'start' ? [c].concat(m.cards) : m.cards.concat([c]);
+      const ranksN = e === 'start' ? [p].concat(m.ranks) : m.ranks.concat([p]);
+      return cardsN.map((x, i) => ({ card: x, rank: ranksN[i] }));
+    }
+    return null;
+  }
+  function layOffResult(m, cards, pos) {
     if (cards.length === 1 && !cards[0].joker) {
       const c = cards[0];
       for (let i = 0; i < m.cards.length; i++) {
         if (!m.cards[i].joker) continue;
         if (m.t === 'G' ? c.rank !== m.ranks.find((r, k) => !m.cards[k].joker) : !sameRank(c.rank, m.ranks[i])) continue;
         const nc = m.cards.slice(); nc[i] = c;
+        if (m.t === 'S' || m.t === 'A') {
+          // Platz bleibt gleich – nur Farbe prüfen
+          const ref = m.cards.map((x, k) => ({ x, p: m.ranks[k] })).find((o) => !o.x.joker);
+          if (ref && m.t === 'S' && c.suit !== ref.x.suit) continue;
+          if (ref && m.t === 'A' && (isRed(c) === isRed(ref.x)) !== (Math.abs(m.ranks[i] - ref.p) % 2 === 0)) continue;
+          return { arr: nc.map((x, k) => ({ card: x, rank: m.ranks[k] })), joker: m.cards[i] };
+        }
         const arr = validMeld(nc, m.t);
         if (arr) return { arr, joker: m.cards[i] };
       }
     }
-    const arr = validMeld(m.cards.concat(cards), m.t);
+    if ((m.t === 'S' || m.t === 'A') && cards.length === 1) {
+      const arr = extendRun(m, cards[0], pos);
+      return arr ? { arr, joker: null } : null;
+    }
+    const arr = validMeld(m.cards.concat(cards), m.t, 0, pos === 'start' ? 'low' : undefined);
     return arr ? { arr, joker: null } : null;
   }
 
@@ -451,7 +489,7 @@
       if (R.fromHand && left > 1) return 'In dieser Runde muss komplett aus der Hand ausgemacht werden (höchstens 1 Karte zum Abwerfen übrig).';
       removeFromHand(p, cards);
       meldCards.forEach((mc, i) => {
-        const arr = validMeld(mc, types[i]);
+        const arr = validMeld(mc, types[i], 0, mc[0].joker && !mc[mc.length - 1].joker ? 'low' : undefined);
         s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) });
       });
       p.down = true;
@@ -478,7 +516,7 @@
       const ids = a.cardIds || (a.cardId != null ? [a.cardId] : []);
       const cards = takeFromHand(p, ids);
       if (!cards || !cards.length) return 'Karten nicht auf der Hand';
-      const res = layOffResult(m, cards);
+      const res = layOffResult(m, cards, a.pos);
       if (!res) {
         const nj = m.cards.concat(cards).filter((c) => c.joker).length;
         if (nj && m.cards.length + cards.length - nj <= nj) return 'Zu viele Joker: In jeder Kombination muss mindestens eine echte Karte mehr liegen als Joker.';
@@ -903,7 +941,7 @@
   }
 
   return {
-    SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, RANK_LABEL, isRed, rankLabel, cardLabel, cardPoints, handPoints,
+    SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, RANK_LABEL, isRed, rankLabel, normPos, cardLabel, cardPoints, handPoints,
     validMeld, layOffResult, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock,
   };
 });

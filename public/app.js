@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.35 · 15.11.2026';
+  const VERSION = '1.36 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -501,7 +501,7 @@
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
           const ok = layTarget && !(v.ownLocked && m.owner === me) && E.layOffResult(m, ui.selected.map((id) => handById.get(id)));
-          return `<div class="meld ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, { rep: c.joker ? m.ranks[k] : 0 })).join('')}</div>`;
+          return `<div class="meld ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, { rep: c.joker ? m.ranks[k] : 0 })).join('')}</div>`;
         }).join('')}
       </div></div>`);
     }
@@ -692,6 +692,7 @@
         <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3) – auch rundherum ist erlaubt (K-A-2).</li>
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
         <li><b>Joker</b> ersetzen jede beliebige Karte – in jeder Kombination muss aber mindestens <b>eine echte Karte mehr</b> liegen als Joker (2 Karten + 1 Joker, 3 Karten + 2 Joker …).</li>
+        <li><b>Joker an eine Sequenz anlegen:</b> Zieh den Joker auf die linke oder rechte Hälfte der Sequenz – dort kommt er hin (vorne oder hinten). Beim ersten Auslegen gilt: Liegt der Joker im Sammelstapel ganz vorne, kommt er an den Anfang der Sequenz.</li>
         <li><b>Joker tauschen:</b> Nach dem ersten Auslegen darfst du die passende echte Karte auf den Platz eines Jokers legen. Der Joker kommt auf deine Hand und muss im selben Zug wieder an eine beliebige Kombination angelegt werden.</li>
         <li>Beim <b>ersten Auslegen</b> wird <b>genau die Vorgabe</b> ausgelegt – z. B. in Runde 1 genau eine Gruppe aus 3 Karten und eine Sequenz aus 4 Karten. Steht „mind.“ dabei, darf die Kombination länger sein.</li>
         <li>Im selben Zug darf man danach nur bei den <b>Gegenspielern</b> anlegen. An die <b>eigenen</b> Kombinationen erst ab dem nächsten Zug.</li>
@@ -728,6 +729,7 @@
         <li><b>Run:</b> at least 4 consecutive cards of the same suit, e.g. ♠10 J Q K. The ace counts high (Q-K-A) or low (A-2-3) – wrapping around is allowed too (K-A-2).</li>
         <li><b>Skalamala:</b> 10-card run alternating red – black (2 red, 3 black, 4 red …).</li>
         <li><b>Jokers</b> replace any card – but every meld needs at least <b>one more real card</b> than jokers (2 cards + 1 joker, 3 cards + 2 jokers …).</li>
+        <li><b>Laying a joker on a run:</b> drag the joker onto the left or right half of the run – that's where it goes (front or back). For your first meld: if the joker is first in the collect pile, it goes to the start of the run.</li>
         <li><b>Swapping a joker:</b> after your first meld you may place the matching real card on a joker's spot. The joker goes to your hand and must be laid off again on any meld in the same turn.</li>
         <li>For your <b>first meld</b> you lay down <b>exactly the contract</b> – e.g. in round 1 exactly a group of 3 cards and a run of 4 cards. If it says „at least“, the meld may be longer.</li>
         <li>In the same turn you may then only lay off on <b>opponents'</b> melds. On your <b>own</b> melds from your next turn.</li>
@@ -788,7 +790,7 @@
   $app.addEventListener('click', (e) => {
     if (e.target.closest('#hand .card, #pilerow .card')) return; // per Zeiger-Logik (Tippen/Ziehen)
     const meldEl = e.target.closest('[data-meld]');
-    if (meldEl) return layOff(+meldEl.dataset.meld);
+    if (meldEl) return layOff(+meldEl.dataset.meld, meldEnd(meldEl, e.clientX));
     const b = e.target.closest('[data-a]');
     if (b && b.dataset.a) handle(b.dataset.a, b);
   });
@@ -832,7 +834,7 @@
 
   // ---------- Ziehen & Ablegen der Handkarten ----------
   let drag = null;
-  function clearDropMarks() { document.querySelectorAll('.drop-l,.drop-r,.drop-on').forEach((x) => x.classList.remove('drop-l', 'drop-r', 'drop-on')); }
+  function clearDropMarks() { document.querySelectorAll('.drop-l,.drop-r,.drop-on,.drop-start,.drop-end').forEach((x) => x.classList.remove('drop-l', 'drop-r', 'drop-on', 'drop-start', 'drop-end')); }
   function dropSlot(x, y, rects) {
     let best = null, bd = Infinity;
     for (const r of rects) {
@@ -879,7 +881,11 @@
       drag.ghost.style.transform = `translate(-50%, -45%) rotate(${Math.max(-8, Math.min(8, dx / 30))}deg) scale(${sc})`;
     }
     clearDropMarks();
-    if (special) { special.classList.add('drop-on'); return; }
+    if (special) {
+      special.classList.add('drop-on');
+      if (special.dataset.meld && /\b(S|A)\b/.test(special.dataset.mt || '')) special.classList.add(meldEnd(special, e.clientX) === 'start' ? 'drop-start' : 'drop-end');
+      return;
+    }
     const sl = dropSlot(e.clientX, e.clientY, drag.rects);
     if (sl) sl.target.el.classList.add(sl.after ? 'drop-r' : 'drop-l');
   });
@@ -935,7 +941,7 @@
       if (!v.players[v.seat].down) { toast('Erst die Vorgabe auslegen, dann anlegen.'); return render(); }
       const ids = ui.selected.includes(d.id) ? ui.selected.slice() : [d.id];
       ui.selected = []; ui.pendingRender = false;
-      ui.ctl.act({ type: 'layOff', cardIds: ids, meldId: +onMeld.dataset.meld });
+      ui.ctl.act({ type: 'layOff', cardIds: ids, meldId: +onMeld.dataset.meld, pos: meldEnd(onMeld, e.clientX) });
       return render();
     }
     if (!cancel && d.fromPile) {
@@ -960,7 +966,14 @@
     if (i >= 0) ui.selected.splice(i, 1); else ui.selected.push(id);
     render();
   }
-  function layOff(meldId) {
+  // Vorne oder hinten anlegen? (Sequenzen: Joker-Platz per Zeiger bestimmen)
+  function meldEnd(meldEl, x) {
+    const cs = meldEl.querySelectorAll('.card');
+    if (!cs.length) return 'end';
+    const a = cs[0].getBoundingClientRect(), b = cs[cs.length - 1].getBoundingClientRect();
+    return x < (a.left + b.right) / 2 ? 'start' : 'end';
+  }
+  function layOff(meldId, pos) {
     const v = ui.view;
     if (!v) return;
     if (v.current === v.seat && v.phase === 'draw') return toast('Bitte erst eine Karte nehmen – vom Stapel oder von der Ablage.');
@@ -968,7 +981,7 @@
     if (!v.players[v.seat].down) return toast('Erst die Vorgabe auslegen, dann anlegen.');
     if (v.ownLocked && (v.melds.find((m) => m.id === meldId) || {}).owner === v.seat) return toast('An deine eigenen Kombinationen erst ab deinem nächsten Zug anlegen.');
     if (!ui.selected.length) return toast('Wähle zuerst Karten aus deiner Hand.');
-    ui.ctl.act({ type: 'layOff', cardIds: ui.selected.slice(), meldId });
+    ui.ctl.act({ type: 'layOff', cardIds: ui.selected.slice(), meldId, pos });
     ui.selected = [];
   }
 
