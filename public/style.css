@@ -1035,3 +1035,6 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .card .csg b { font-size: .2em; -webkit-text-stroke: 0; color: #e3262b; background: #fff;
   border: max(1px, .06em) solid #111; border-radius: .14em; padding: .05em .16em .02em; line-height: 1;
   transform: translate(-50%, -50%) rotate(-10deg); }
+/* 1.40: nur zwei Kartenfarben – Herz/Karo rot, Pik/Kreuz blau (wichtig für die Skalamala-Runde rot/schwarz) */
+.card.s-D { --tint: #ffe1e3; --ink-c: #c8142a; }
+.card.s-C { --tint: #dfeaff; --ink-c: #1b3f9a; }

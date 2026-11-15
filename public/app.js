@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.38 · 15.11.2026';
+  const VERSION = '1.40 · 15.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -57,6 +57,11 @@
     return hand.slice().sort((a, b) => {
       if (a.joker !== b.joker) return a.joker ? 1 : -1;
       if (a.joker) return a.id - b.id;
+      if (mode === 'alt') {
+        // Skalamala: zwei Ketten, in denen rot/schwarz von selbst abwechseln (Wert + Farbe gerade/ungerade)
+        const k = (c) => (c.rank + (c.suit === 'H' || c.suit === 'D' ? 1 : 0)) % 2;
+        return k(a) - k(b) || a.rank - b.rank || SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || a.id - b.id;
+      }
       if (mode === 'rank') return a.rank - b.rank || SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || a.id - b.id;
       return SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || a.rank - b.rank || a.id - b.id;
     });
@@ -65,6 +70,8 @@
   // Eigene Reihenfolge (per Ziehen) oder automatisch sortiert
   function orderedHand(cards, round) {
     if (ui.sort === 'custom' && ui.orderRound !== round) { ui.sort = store.get('sort', 'suit'); }
+    const altRound = E.ROUNDS[round] && E.ROUNDS[round].slots.some((x) => x.t === 'A');
+    if (ui.sort === 'alt' && !altRound) ui.sort = store.get('sort', 'suit') === 'alt' ? 'suit' : store.get('sort', 'suit');
     if (ui.sort !== 'custom') return sortHand(cards, ui.sort);
     const pos = new Map(ui.order.map((id, i) => [id, i]));
     const key = (c) => (pos.has(c.id) ? pos.get(c.id) : 1e6 + c.id);
@@ -251,7 +258,7 @@
   function playEvents(prev, v) {
     const S = window.SkSound;
     if (!S || !prev || prev.round !== v.round) return;
-    const ended = (v.phase === 'roundEnd' || v.phase === 'gameEnd') && prev.phase !== v.phase;
+    const ended = (v.phase === 'lastLay' && prev.phase !== 'lastLay') || ((v.phase === 'roundEnd' || v.phase === 'gameEnd') && prev.phase !== v.phase && prev.phase !== 'lastLay');
     if (ended) return S.play('win');
     const downs = (x) => x.players.filter((p) => p.down).length;
     if (downs(v) > downs(prev)) return S.play('tusch');
@@ -449,6 +456,11 @@
     const R = v.roundInfo;
     if (v.phase === 'roundEnd') return { t: 'Runde beendet', mine: false };
     if (v.phase === 'gameEnd') return { t: 'Spiel beendet', mine: false };
+    if (v.phase === 'lastLay' && v.lastLay) {
+      const w = v.players[v.lastLay.winner].name;
+      if (v.lastLay.pending.includes(me)) return { t: `🎉 ${w} hat ausgemacht! Du darfst noch die Vorgabe auslegen – nur die Vorgabe, nichts anlegen.`, mine: true };
+      return { t: `🎉 ${w} hat ausgemacht – die anderen dürfen noch ihre Vorgabe auslegen…`, mine: false };
+    }
     if (v.phase === 'knock') {
       if (v.knock.pending.includes(me)) return { t: '👊 Klopfen oder passen?', mine: true };
       return { t: `Es darf geklopft werden…`, mine: false };
@@ -550,6 +562,10 @@
       actions.push('<button class="btn primary" data-a="drawStock">Vom Stapel</button>');
       if (v.discardTop) actions.push('<button class="btn" data-a="takeDiscard">Ablage nehmen</button>');
     }
+    if (v.phase === 'lastLay' && v.lastLay && v.lastLay.pending.includes(me)) {
+      if (contract) actions.push(`<button class="btn primary" data-a="layDown">✓ Vorgabe auslegen</button>`);
+      actions.push(`<button class="btn ${contract ? '' : 'primary'}" data-a="lastPass">Nichts auslegen</button>`);
+    }
     if (canPlay) {
       if (!myP.down) {
         if (contract) actions.push(`<button class="btn primary" data-a="layDown">${R.fromHand ? '🎉 Ausmachen!' : '✓ Auslegen'}</button>`);
@@ -607,6 +623,7 @@
             <span>
               <button class="btn small sortbtn ${ui.sort === 'suit' ? 'on' : ''}" data-a="sortSuit">Farbe</button>
               <button class="btn small sortbtn ${ui.sort === 'rank' ? 'on' : ''}" data-a="sortRank">Wert</button>
+              ${R.slots.some((x) => x.t === 'A') ? `<button class="btn small sortbtn ${ui.sort === 'alt' ? 'on' : ''}" data-a="sortAlt">Rot/Schwarz</button>` : ''}
               ${ui.selected.length ? '<button class="btn small danger" data-a="clearSel" aria-label="Auswahl aufheben">✕</button>' : ''}
             </span>
           </div>
@@ -736,6 +753,7 @@
       <h3>Die 8 Runden</h3>
       <ol>${E.ROUNDS.map((r) => `<li><b>${esc(r.title)}</b> – ${esc(r.detail)}</li>`).join('')}</ol>
       <p>Am Rundenende drückt <b>jeder Spieler „Weiter“</b> – sind alle bereit, beginnt die nächste Runde.</p>
+      <p><b>Hat jemand ausgemacht</b>, dürfen alle, die noch nicht ausgelegt haben, <b>noch schnell die Vorgabe auslegen</b> – aber nur genau die Vorgabe, nichts anlegen. Das spart Punkte. Dafür bleiben 30 Sekunden („Nichts auslegen“, wenn es nicht passt).</p>
       <p>In Runde 7 und 8 muss man <b>aus der Hand ausmachen</b>: alle Karten auf einmal auslegen (höchstens eine bleibt zum Abwerfen übrig).</p>
       <h3>Punkte</h3>
       <p>Wer zuerst keine Karten mehr hat, macht aus. Alle anderen zählen ihre Handkarten: 2–9 = 5, 10 bis König = 10, Ass = 20, Joker = 50 Punkte. Nach 8 Runden gewinnt, wer <b>die wenigsten Punkte</b> hat.</p>
@@ -773,6 +791,7 @@
       <h3>The 8 rounds</h3>
       <ol>${RT.map((t, i) => `<li><b>${t}</b> – ${RD[i]}</li>`).join('')}</ol>
       <p>At the end of a round <b>every player presses „Next“</b> – when everyone is ready, the next round begins.</p>
+      <p><b>When someone goes out</b>, everyone who hasn't melded yet may <b>still lay down the contract</b> – exactly the contract, no laying off. That saves points. You have 30 seconds („Lay nothing“ if it doesn't fit).</p>
       <p>In rounds 7 and 8 you must <b>go out from your hand</b>: lay down all cards at once (at most one card is left to discard).</p>
       <h3>Points</h3>
       <p>Whoever runs out of cards first goes out. Everyone else counts their hand: 2–9 = 5, 10 to King = 10, Ace = 20, Joker = 50 points. After 8 rounds, the player with <b>the fewest points</b> wins.</p>
@@ -1119,6 +1138,7 @@
         });
       case 'sortSuit': ui.sort = 'suit'; store.set('sort', 'suit'); return render();
       case 'sortRank': ui.sort = 'rank'; store.set('sort', 'rank'); return render();
+      case 'sortAlt': ui.sort = 'alt'; return render();
       case 'clearSel': ui.selected = []; return render();
       case 'drawStock': return ui.ctl.act({ type: 'drawStock' });
       case 'rejectKnock': return ui.ctl.act({ type: 'rejectKnock' });
@@ -1146,6 +1166,7 @@
         return render();
       }
       case 'dissolve': ui.piles.splice(+el.dataset.i, 1); return render();
+      case 'lastPass': return ui.ctl.act({ type: 'lastPass' });
       case 'layDown': {
         const c = contractFromPiles(v) || contractFromSelection(v);
         if (!c) return toast(`Deine Sammelstapel erfüllen die Vorgabe noch nicht: ${v.roundInfo.slots.map(E.slotLabel).join(' + ')}`, 3200);

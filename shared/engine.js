@@ -361,7 +361,21 @@
     log(s, `${s.players[s.current].name} zieht vom Stapel.`);
   }
 
+  // Jemand macht aus: Wer noch nicht ausgelegt hat, darf jetzt noch genau die Vorgabe auslegen (nichts anlegen)
   function endRound(s, winner) {
+    if (winner != null) {
+      const pend = s.players.map((p, i) => i).filter((i) => i !== winner && !s.players[i].down && s.players[i].hand.length);
+      if (pend.length) {
+        log(s, `🎉 ${s.players[winner].name} macht aus! Wer noch nicht ausgelegt hat, darf jetzt die Vorgabe auslegen.`);
+        s.phase = 'lastLay';
+        s.lastLay = { winner, pending: pend, deadline: Date.now() + (s.opts.lastLayMs || 30000) };
+        return;
+      }
+    }
+    finishRound(s, winner);
+  }
+  function finishRound(s, winner) {
+    s.lastLay = null;
     const pts = s.players.map((p, i) => (i === winner ? 0 : handPoints(p.hand)));
     s.players.forEach((p, i) => { p.scores.push(pts[i]); p.total += pts[i]; });
     s.lastRound = {
@@ -369,7 +383,7 @@
       points: pts,
       hands: s.players.map((p) => p.hand.slice()),
     };
-    if (winner != null) log(s, `🎉 ${s.players[winner].name} macht aus!`);
+    if (winner != null) log(s, `🎉 ${s.players[winner].name} hat die Runde gewonnen!`);
     else log(s, 'Der Stapel ist aufgebraucht – Runde beendet, alle zählen ihre Handkarten.');
     s.phase = s.round >= ROUNDS.length - 1 ? 'gameEnd' : 'roundEnd';
   }
@@ -410,6 +424,32 @@
     if (a.type === 'nextRound') {
       if (s.phase !== 'roundEnd') return 'Runde läuft noch';
       startRound(s);
+      return null;
+    }
+    if (s.phase === 'lastLay') {
+      const L = s.lastLay;
+      if (a.type === 'lastLayTimeout') { L.pending = []; finishRound(s, L.winner); return null; }
+      if (seat == null || !L.pending.includes(seat)) return 'Die Runde ist vorbei – du darfst nichts mehr auslegen.';
+      if (a.type === 'lastPass') {
+        L.pending = L.pending.filter((i) => i !== seat);
+        log(s, `${p.name} legt nichts mehr aus.`);
+      } else if (a.type === 'layDown') {
+        if (!Array.isArray(a.melds) || a.melds.length !== R.slots.length) return `Nur genau die Vorgabe auslegen: ${R.slots.map(slotLabel).join(' + ')}.`;
+        const cards = takeFromHand(p, [].concat(...a.melds));
+        if (!cards) return 'Karten nicht auf der Hand';
+        const meldCards = a.melds.map((ids) => ids.map((id) => cards.find((c) => c.id === id)));
+        const types = matchContract(meldCards, R.slots);
+        if (!types) return `Nur genau die Vorgabe auslegen: ${R.slots.map(slotLabel).join(' + ')}.`;
+        removeFromHand(p, cards);
+        meldCards.forEach((mc, i) => {
+          const arr = validMeld(mc, types[i], 0, mc[0].joker && !mc[mc.length - 1].joker ? 'low' : undefined);
+          s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) });
+        });
+        p.down = true;
+        L.pending = L.pending.filter((i) => i !== seat);
+        log(s, `${p.name} legt noch schnell aus: ${types.map((t) => TYPE_NAME[t]).join(', ')}.`);
+      } else return 'Jetzt darfst du nur noch die Vorgabe auslegen oder passen.';
+      if (!L.pending.length) finishRound(s, L.winner);
       return null;
     }
     if (a.type === 'knockTimeout') {
@@ -595,6 +635,7 @@
         canKnock: canKnock(s, seat),
         pending: s.phase === 'knock' ? knockPending(s) : [],
       },
+      lastLay: s.phase === 'lastLay' && s.lastLay ? { winner: s.lastLay.winner, pending: s.lastLay.pending.slice(), deadline: s.lastLay.deadline } : null,
       log: s.log.slice(-25),
       // Am Rundenende nur Punkte zeigen – fremde Karten bleiben verdeckt, nur die eigenen Restkarten sind sichtbar
       lastRound: reveal && s.lastRound ? {
@@ -745,6 +786,13 @@
     return s.melds.find((m) => !(locked && m.owner === seat) && layOffResult(m, [c]));
   }
 
+  // Nach dem Ausmachen eines anderen: Vorgabe noch auslegen, wenn möglich
+  function botLastLay(s, i) {
+    const R = ROUNDS[s.round];
+    const f = findContract(s.players[i].hand, R, false);
+    return f && f.melds && f.melds.length === R.slots.length ? { type: 'layDown', melds: f.melds.map((m) => m.cards.map((c) => c.id)) } : { type: 'lastPass' };
+  }
+
   // Will der Bot um die offene Karte klopfen?
   function botWantsKnock(s, seat) {
     const R = ROUNDS[s.round];
@@ -833,6 +881,15 @@
       knock: { responses: Object.assign({}, v.knock.responses), order: [], deadline: 0 }, opts: {},
     };
     const me = players[seat], top = v.discardTop, L = (c) => cardLabel(c);
+    if (v.phase === 'lastLay') {
+      if (!v.lastLay || !v.lastLay.pending.includes(seat)) return null;
+      const f = findContract(me.hand, R, false);
+      if (f && f.melds && f.melds.length === R.slots.length) {
+        const melds = f.melds.map((m) => m.cards.map((c) => c.id));
+        return { text: 'Du kannst die Vorgabe noch auslegen – das spart Punkte! Vorschlag in die Sammelstapel legen?', ids: [].concat(...melds), melds };
+      }
+      return { text: 'Die Vorgabe hast du leider nicht zusammen – tippe auf „Nichts auslegen“.', ids: [] };
+    }
     if (v.phase === 'knock') {
       if (!(v.knock.pending || []).includes(seat)) return null;
       return botWantsKnock(s, seat)
@@ -898,6 +955,20 @@
       if (this.dead) return;
       const s = this.s, seq = s.seq;
       s.autoSeats = s.players.map((_, i) => !!this.isAuto(i));
+      if (s.phase === 'lastLay' && s.lastLay) {
+        // Bots legen ihre Vorgabe aus, wenn sie können; Menschen haben bis zum Zeitlimit
+        for (const i of s.lastLay.pending.filter((i) => this.isAuto(i))) {
+          this._later(700 + Math.random() * 900, () => {
+            if (s.phase !== 'lastLay' || !s.lastLay.pending.includes(i)) return;
+            const a = botLastLay(s, i);
+            if (act(s, i, a) && a.type === 'layDown') act(s, i, { type: 'lastPass' });
+            this.opts.onChange(); this._tick();
+          });
+        }
+        const ms = Math.max(0, s.lastLay.deadline - Date.now());
+        this._later(ms + 50, () => { if (s.seq === seq && s.phase === 'lastLay') { act(s, null, { type: 'lastLayTimeout' }); this.opts.onChange(); this._tick(); } });
+        return;
+      }
       if (s.phase === 'knock') {
         const pend = knockPending(s);
         const autos = pend.filter((i) => this.isAuto(i));
@@ -954,6 +1025,6 @@
 
   return {
     SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, RANK_LABEL, isRed, rankLabel, normPos, cardLabel, cardPoints, handPoints,
-    validMeld, layOffResult, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock,
+    validMeld, layOffResult, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock, botLastLay,
   };
 });

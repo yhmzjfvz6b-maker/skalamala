@@ -131,6 +131,18 @@
   // ---------- English ----------
   const N = '(.+?)', C = '(\\S+)';
   const EN_PHRASES = [
+    [new RegExp('🎉 ' + N + ' macht aus! Wer noch nicht ausgelegt hat, darf jetzt die Vorgabe auslegen\\.', 'g'), '🎉 $1 goes out! Anyone who hasn\'t melded may now lay down the contract.'],
+    [new RegExp('🎉 ' + N + ' hat die Runde gewonnen!', 'g'), '🎉 $1 wins the round!'],
+    [new RegExp(N + ' legt nichts mehr aus\\.', 'g'), '$1 lays nothing more.'],
+    [new RegExp(N + ' legt noch schnell aus: ', 'g'), '$1 quickly melds: '],
+    [new RegExp('🎉 ' + N + ' hat ausgemacht! Du darfst noch die Vorgabe auslegen – nur die Vorgabe, nichts anlegen\\.', 'g'), '🎉 $1 went out! You may still lay down the contract – only the contract, no laying off.'],
+    [new RegExp('🎉 ' + N + ' hat ausgemacht – die anderen dürfen noch ihre Vorgabe auslegen…', 'g'), '🎉 $1 went out – the others may still lay down their contract…'],
+    [/✓ Vorgabe auslegen/g, '✓ Meld contract'], [/^Nichts auslegen$/g, 'Lay nothing'],
+    [/Die Runde ist vorbei – du darfst nichts mehr auslegen\./g, 'The round is over – you can\'t meld anything else.'],
+    [/Jetzt darfst du nur noch die Vorgabe auslegen oder passen\./g, 'Now you may only lay down the contract or pass.'],
+    [/Nur genau die Vorgabe auslegen: (.+?)\./g, 'Lay down exactly the contract: $1.'],
+    [/Du kannst die Vorgabe noch auslegen – das spart Punkte! Vorschlag in die Sammelstapel legen\?/g, 'You can still meld the contract – that saves points! Put the suggestion into collect piles?'],
+    [/Die Vorgabe hast du leider nicht zusammen – tippe auf „Nichts auslegen“\./g, 'You don\'t have the contract – tap „Lay nothing“.'],
     // Spielverlauf (Server/Engine)
     [/Der Stapel ist leer – die Ablage wird neu gemischt \(letztes Mal in dieser Runde\)\./g, 'The stock is empty – the discard pile is reshuffled (last time this round).'],
     [new RegExp('👊 ' + N + ' klopft und nimmt ' + C + ' \\+ 1 verdeckte Karte\\.', 'g'), '👊 $1 knocks and takes $2 + 1 face-down card.'],
@@ -243,7 +255,7 @@
     [/^Abwerfen$/g, 'Discard'], [/Endergebnis/g, 'Final result'], [/Rundenergebnis/g, 'Round result'], [/Neues Spiel/g, 'New game'],
     [/Sammelstapel – Karten hierher ziehen/g, 'Collect pile – drag cards here'], [/Sammelstapel/g, 'Collect pile'],
     [/(\d+) Karten · (\d+) Pkt/g, '$1 cards · $2 pts'], [/· ziehen zum Sortieren/g, '· drag to sort'],
-    [/^Farbe$/g, 'Suit'], [/^Wert$/g, 'Rank'], [/(\d+) Pkt/g, '$1 pts'],
+    [/^Rot\/Schwarz$/g, 'Red/black'], [/^Farbe$/g, 'Suit'], [/^Wert$/g, 'Rank'], [/(\d+) Pkt/g, '$1 pts'],
     [/^Stapel \((\d+)\)$/g, 'Pile ($1)'], [/^Stapel$/g, 'Stock'], [/^Ablage( \(\d+\))?$/g, 'Discard$1'],
     [/: nur (\d+) Karten!/g, ': only $1 cards!'], [/ – noch (\d+)$/g, ' – $1 more'], [/^passt nicht$/g, 'doesn\'t fit'],
     [/10er-Sequenz abwechselnd rot – schwarz/g, '10-card run alternating red – black'],
