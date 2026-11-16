@@ -13,7 +13,7 @@ const E = require('./shared/engine.js');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
-const MAX_PLAYERS = 8;
+const MAX_PLAYERS = 6;
 const RECONNECT_GRACE_MS = 20000; // so lange wird auf einen getrennten Spieler gewartet, dann spielt ein Bot für ihn
 
 // ---------------- Statische Dateien ----------------
@@ -72,7 +72,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/' || url.pathname === '/index.html') logEvent('Besuch', { dev: device(req.headers['user-agent']) });
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, version: '1.57', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
+    return res.end(JSON.stringify({ ok: true, version: '1.58', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');

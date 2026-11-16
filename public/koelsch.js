@@ -249,7 +249,7 @@
     [/Fehlt noch: /g, 'Still missing: '], [/Alle Mitglieder sind da!/g, 'All members are here!'],
     [/Einladungslink kopieren/g, 'Copy invite link'], [/\(du\)/g, '(you)'], [/^Gastgeber$/g, 'Host'],
     [/Spiel starten/g, 'Start game'],
-    [/2–8 Spieler\. Warte, bis alle drin sind, und starte dann\./g, '2–8 players. Wait until everyone has joined, then start.'],
+    [/2–6 Spieler\. Warte, bis alle drin sind, und starte dann\./g, '2–6 players. Wait until everyone has joined, then start.'],
     [/Warte, bis der Gastgeber das Spiel startet…/g, 'Waiting for the host to start the game…'],
     [/Raum verlassen/g, 'Leave room'],
     // Spielfläche
