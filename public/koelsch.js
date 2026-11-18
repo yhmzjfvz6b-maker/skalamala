@@ -252,6 +252,7 @@
     [/2–6 Spieler\. Warte, bis alle drin sind, und starte dann\./g, '2–6 players. Wait until everyone has joined, then start.'],
     [/Warte, bis der Gastgeber das Spiel startet…/g, 'Waiting for the host to start the game…'],
     [/Raum verlassen/g, 'Leave room'],
+    [/^Skalamala ([↑↓])$/g, 'Skalamala $1'], [/^Zug\s*$/g, 'Turn '], [/Vollbild ist hier nicht möglich – öffne das Spiel direkt im Browser\./g, 'Fullscreen is not possible here – open the game directly in the browser.'],
     [/🃏 Wofür steht der Joker\?/g, '🃏 What does the joker stand for?'], [/ – tippe die gewünschte Reihenfolge an\./g, ' – tap the order you want.'],
     [/Joker = /g, 'Joker = '], [/ \(rot\)/g, ' (red)'], [/ \(schwarz\)/g, ' (black)'], [/^Abbrechen$/g, 'Cancel'], [/\((\d) von (\d)\)/g, '($1 of $2)'],
     // Spielfläche

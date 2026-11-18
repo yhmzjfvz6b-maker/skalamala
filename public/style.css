@@ -1109,3 +1109,21 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .jchoice .meld.jopt { --mw: 46px; display: flex; flex-wrap: nowrap; padding: 4px 0; background: none; border: 0; box-shadow: none; overflow-x: auto; max-width: 100%; }
 .jchoice .meld.jopt .mt { display: none; }
 .jchoice span { font-size: .95rem; }
+
+/* 1.60: großes Klopfen-Fenster, Uhren */
+.handzone .knockprompt.kbig { padding: 12px 18px; gap: 18px; }
+.handzone .knockprompt.kbig .card { --cw: 78px; }
+.handzone .knockprompt.kbig h3 { font-size: 2.2rem; }
+.handzone .knockprompt.kbig .bar { height: 9px; margin-top: 10px; }
+.knockprompt.kbig .kpbtns { gap: 8px; }
+.knockprompt.kbig .kpbtns .btn { font-size: 1.15rem; padding: 12px 22px; min-width: 150px; }
+@media (max-width: 640px) {
+  .handzone .knockprompt.kbig { padding: 10px 12px; gap: 12px; }
+  .handzone .knockprompt.kbig .card { --cw: 60px; }
+  .handzone .knockprompt.kbig h3 { font-size: 1.6rem; }
+  .knockprompt.kbig .kpbtns .btn { font-size: 1rem; padding: 10px 14px; min-width: 112px; }
+}
+.clocks { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font-size: .78rem; line-height: 1.2; color: rgba(255,255,255,.85); white-space: nowrap; flex: none; padding: 0 4px; font-variant-numeric: tabular-nums; }
+.clocks b { color: #fff; font-weight: 700; }
+.clocks .tclock { color: var(--yellow); }
+@media (max-width: 640px) { .clocks { font-size: .68rem; } }

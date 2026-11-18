@@ -287,6 +287,7 @@
       log: [], seq: 0,
       lastRound: null,
       opts: Object.assign({ knockMs: 7000 }, opts || {}),
+      started: Date.now(),
     };
     startRound(s);
     return s;
@@ -310,6 +311,7 @@
     s.discardBy = null;
     s.reshuffles = 0;
     s.turn = 0;
+    s.turnAt = Date.now();
     s.taken = {};
     s.melds = [];
     s.current = (s.dealer + 1) % n;
@@ -444,12 +446,14 @@
     if (winner != null) log(s, `🎉 ${s.players[winner].name} hat die Runde gewonnen!`);
     else log(s, 'Der Stapel ist aufgebraucht – Runde beendet, alle zählen ihre Handkarten.');
     s.phase = s.round >= ROUNDS.length - 1 ? 'gameEnd' : 'roundEnd';
+    if (s.phase === 'gameEnd') s.ended = Date.now();
   }
 
   function nextTurn(s) {
     s.mustPlay = [];
     s.current = (s.current + 1) % s.players.length;
     s.turn = (s.turn || 0) + 1;
+    s.turnAt = Date.now();
     s.phase = 'draw';
     s.knock = { responses: {}, deadline: 0, order: [] };
     s.lastDrawn = null;
@@ -685,6 +689,7 @@
       mustPlay: seat === s.current ? (s.mustPlay || []).slice() : [],
       got: seat != null && s.got && s.got[seat] ? s.got[seat].slice() : [],
       gotSeq: seat != null && s.gotSeq ? s.gotSeq[seat] || 0 : 0,
+      clock: { game: (s.ended || Date.now()) - (s.started || Date.now()), turn: Date.now() - (s.turnAt || Date.now()) },
       ownLocked: seat != null && s.players[seat] ? (s.players[seat].down && s.players[seat].downTurn === s.turn) : false,
       knock: {
         responses: Object.assign({}, s.knock.responses),

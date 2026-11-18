@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.59 · 18.11.2026';
+  const VERSION = '1.60 · 18.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -70,10 +70,11 @@
     return hand.slice().sort((a, b) => {
       if (a.joker !== b.joker) return a.joker ? 1 : -1;
       if (a.joker) return a.id - b.id;
-      if (mode === 'alt') {
+      if (mode === 'alt' || mode === 'altd') {
         // Skalamala: zwei Ketten, in denen rot/schwarz von selbst abwechseln (Wert + Farbe gerade/ungerade)
         const k = (c) => (c.rank + (c.suit === 'H' || c.suit === 'D' ? 1 : 0)) % 2;
-        return k(a) - k(b) || a.rank - b.rank || SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || a.id - b.id;
+        const dir = mode === 'altd' ? -1 : 1;
+        return k(a) - k(b) || dir * (a.rank - b.rank) || SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || a.id - b.id;
       }
       if (mode === 'rank') return a.rank - b.rank || SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || a.id - b.id;
       return SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit] || a.rank - b.rank || a.id - b.id;
@@ -311,6 +312,7 @@
   function onView(v) {
     const prev = ui.view;
     ui.view = v;
+    ui.clockAt = Date.now();
     if (ui.screen !== 'game') ui.screen = 'game';
     // Auswahl bereinigen
     const ids = new Set(v.hand.map((c) => c.id));
@@ -634,6 +636,8 @@
           <div class="txt"><div class="ttl">${esc(R.title)}</div><div class="det ${warn ? 'warn' : ''}">${esc(R.detail)}</div></div>
         </div>
         <div class="players">${players}</div>
+        <div class="clocks" title="Spielzeit · Dauer des aktuellen Zugs"><span>⏱ <b id="gclock">${fmtClock(clockNow(v).game)}</b></span><span class="tclock">Zug <b id="tclock">${fmtClock(clockNow(v).turn)}</b></span></div>
+        ${fsSupported() ? `<button class="btn icon ghost" data-a="fullscreen" aria-label="Vollbild" title="Vollbild">${document.fullscreenElement || document.webkitFullscreenElement ? '🗗' : '⛶'}</button>` : ''}
         <button class="btn icon ghost" data-a="scores" aria-label="Punkte">🏆</button>
         <button class="btn icon ghost only-wide" data-a="rules" aria-label="Regeln">?</button>
         <button class="btn icon ghost" data-a="menu" aria-label="Menü">☰</button>
@@ -646,7 +650,7 @@
             <span>
               <button class="btn small sortbtn ${ui.sort === 'suit' ? 'on' : ''}" data-a="sortSuit">Farbe</button>
               <button class="btn small sortbtn ${ui.sort === 'rank' ? 'on' : ''}" data-a="sortRank">Wert</button>
-              <button class="btn small sortbtn ${ui.sort === 'alt' ? 'on' : ''}" data-a="sortAlt" title="Für Runde 5 (Skalamala): rot und schwarz abwechselnd">Rot/Schwarz</button>
+              <button class="btn small sortbtn ${ui.sort === 'alt' || ui.sort === 'altd' ? 'on' : ''}" data-a="sortAlt" title="Für Runde 5: rot und schwarz abwechselnd – nochmal tippen dreht die Richtung">Skalamala ${ui.sort === 'altd' ? '↓' : '↑'}</button>
               ${ui.selected.length ? '<button class="btn small danger" data-a="clearSel" aria-label="Auswahl aufheben">✕</button>' : ''}
             </span>
           </div>
@@ -693,16 +697,52 @@
     </div>`;
   }
 
+
+  // ---------- Spielzeit / Zugdauer ----------
+  function clockNow(v) {
+    const c = (v && v.clock) || { game: 0, turn: 0 };
+    const d = Date.now() - (ui.clockAt || Date.now());
+    const running = v && v.phase !== 'gameEnd';
+    const turnRuns = v && v.phase !== 'roundEnd' && v.phase !== 'gameEnd';
+    return { game: c.game + (running ? d : 0), turn: turnRuns ? c.turn + d : null };
+  }
+  function fmtClock(ms) {
+    if (ms == null) return '–';
+    const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+    const pad = (x) => String(x).padStart(2, '0');
+    return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  }
+  setInterval(() => {
+    const g = document.getElementById('gclock'), t = document.getElementById('tclock');
+    if (!g || !ui.view) return;
+    const c = clockNow(ui.view);
+    g.textContent = fmtClock(c.game);
+    if (t) t.textContent = fmtClock(c.turn);
+  }, 1000);
+  // ---------- Vollbild ----------
+  function fsSupported() {
+    const d = document.documentElement;
+    return !!(d.requestFullscreen || d.webkitRequestFullscreen) && (document.fullscreenEnabled !== false || document.webkitFullscreenEnabled);
+  }
+  function toggleFullscreen() {
+    const d = document.documentElement;
+    const on = document.fullscreenElement || document.webkitFullscreenElement;
+    try {
+      const p = on ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (d.requestFullscreen || d.webkitRequestFullscreen).call(d);
+      if (p && p.catch) p.catch(() => toast('Vollbild ist hier nicht möglich – öffne das Spiel direkt im Browser.'));
+    } catch (e) { toast('Vollbild ist hier nicht möglich – öffne das Spiel direkt im Browser.'); }
+  }
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { if (ui.view) render(); }));
+
   function renderKnockPrompt(v) {
     if (v.phase !== 'knock' || !v.knock.pending.includes(v.seat) || !ui.knockPrompt) return '';
-    return `<div class="knockprompt">
+    return `<div class="knockprompt kbig">
       <div class="kpcard">${cardHTML(v.discardTop)}</div>
       <div class="kpmid">
         <h3>Klopfen?</h3>
-        <div class="kpinfo">${esc(v.players[v.current].name)} will sie nicht · du bekommst sie <b>+ 1 Strafkarte</b></div>
         <div class="bar"><i id="kbar"></i></div>
       </div>
-      <div class="kpbtns"><button class="btn primary" data-a="knock">👊 Klopfen</button><button class="btn white small" data-a="pass">Passen</button></div>
+      <div class="kpbtns"><button class="btn primary" data-a="knock">👊 Klopfen</button><button class="btn white" data-a="pass">Passen</button></div>
     </div>`;
   }
   setInterval(() => {
@@ -1306,7 +1346,8 @@
         });
       case 'sortSuit': ui.sort = 'suit'; store.set('sort', 'suit'); return render();
       case 'sortRank': ui.sort = 'rank'; store.set('sort', 'rank'); return render();
-      case 'sortAlt': ui.sort = 'alt'; store.set('sort', 'alt'); return render();
+      case 'sortAlt': ui.sort = ui.sort === 'alt' ? 'altd' : 'alt'; store.set('sort', ui.sort); return render();
+      case 'fullscreen': toggleFullscreen(); return;
       case 'clearSel': ui.selected = []; return render();
       case 'drawStock': return ui.ctl.act({ type: 'drawStock' });
       case 'rejectKnock': return ui.ctl.act({ type: 'rejectKnock' });
