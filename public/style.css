@@ -1101,3 +1101,11 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 #pop .card .newbadge { display: none; }
 @keyframes popout { from { transform: scale(.6); opacity: 0; } }
 #pop .card { isolation: isolate; }
+
+/* 1.59: Joker-Platz wählen */
+.jchoices { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.jchoice { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.jchoice:hover, .jchoice:focus-visible { border-color: var(--yellow); background: rgba(255,214,0,.1); }
+.jchoice .meld.jopt { --mw: 46px; display: flex; flex-wrap: nowrap; padding: 4px 0; background: none; border: 0; box-shadow: none; overflow-x: auto; max-width: 100%; }
+.jchoice .meld.jopt .mt { display: none; }
+.jchoice span { font-size: .95rem; }

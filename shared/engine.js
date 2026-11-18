@@ -63,6 +63,7 @@
   // ---------- Kombinationen prüfen ----------
   // Ordnet eine Sequenz. alt=true: Farben abwechselnd rot/schwarz, beliebige Farben (Pik/Herz…)
   function arrangeRun(cards, alt, pref) {
+    if (pref === 'wrap') return arrangeRunWrap(cards, alt);
     const jokers = cards.filter((c) => c.joker);
     const nat = cards.filter((c) => !c.joker);
     // Joker sind beliebig einsetzbar – auch eine Sequenz nur aus Jokern ist erlaubt
@@ -97,6 +98,8 @@
       let extra = jokers.length - gaps;
       // übrige Joker: an das gewünschte Ende (pref 'low' = vorne), sonst hinten
       if (pref === 'low') { while (extra > 0 && lo > 1) { lo--; extra--; } }
+      // Zahl = so viele übrige Joker gezielt nach vorne (vom Spieler gewählt)
+      if (typeof pref === 'number') { let w = pref; while (w > 0 && extra > 0 && lo > 1) { lo--; extra--; w--; } }
       while (extra > 0 && hi < 14) { hi++; extra--; }
       while (extra > 0 && lo > 1) { lo--; extra--; }
       if (extra > 0) continue;
@@ -168,6 +171,26 @@
     return null;
   }
 
+  // Wofür können die Joker einer Sequenz stehen? Liefert die verschiedenen Möglichkeiten (je Anzahl Joker vorne)
+  function runChoices(cards, t) {
+    if (t !== 'S' && t !== 'A') return [];
+    const nj = cards.filter((c) => c.joker).length;
+    if (!nj || nj === cards.length) return [];
+    const out = [], seen = new Set();
+    for (let k = 0; k <= nj; k++) {
+      const arr = arrangeRun(cards, t === 'A', k);
+      if (!arr) continue;
+      const key = arr.map((x) => x.rank).join(',');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ pref: k, arr });
+    }
+    const w = arrangeRunWrap(cards, t === 'A');
+    if (w && !seen.has(w.map((x) => x.rank).join(','))) out.push({ pref: 'wrap', arr: w });
+    return out;
+  }
+  const meldPref = (a, i, mc) => (a && Array.isArray(a.jpref) && a.jpref[i] === 'wrap' ? 'wrap' : a && Array.isArray(a.jpref) && typeof a.jpref[i] === 'number' ? Math.max(0, Math.min(10, a.jpref[i] | 0)) : (mc[0].joker && !mc[mc.length - 1].joker ? 'low' : undefined));
+
   // Anlegen an eine Kombination. Eine einzelne Karte, die genau den Platz eines Jokers trifft,
   // ersetzt den Joker – der Joker geht zurück auf die Hand.
   const r13 = (x) => { x = normPos(x); return x === 14 ? 1 : x; };
@@ -226,7 +249,7 @@
       const arr = extendRun(m, cards[0], pos);
       return arr ? { arr, joker: null } : null;
     }
-    const arr = validMeld(m.cards.concat(cards), m.t, 0, pos === 'start' ? 'low' : undefined);
+    const arr = validMeld(m.cards.concat(cards), m.t, 0, typeof pos === 'number' ? pos : pos === 'start' ? 'low' : undefined);
     return arr ? { arr, joker: null } : null;
   }
 
@@ -400,7 +423,7 @@
     if (!types) return false;
     removeFromHand(p, cards);
     meldCards.forEach((mc, i) => {
-      const arr = validMeld(mc, types[i], 0, mc[0].joker && !mc[mc.length - 1].joker ? 'low' : undefined);
+      const arr = validMeld(mc, types[i], 0, meldPref(null, i, mc));
       s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank), late: true });
     });
     p.down = true;
@@ -477,7 +500,7 @@
         if (!types) return `Nur genau die Vorgabe auslegen: ${R.slots.map(slotLabel).join(' + ')}.`;
         removeFromHand(p, cards);
         meldCards.forEach((mc, i) => {
-          const arr = validMeld(mc, types[i], 0, mc[0].joker && !mc[mc.length - 1].joker ? 'low' : undefined);
+          const arr = validMeld(mc, types[i], 0, meldPref(a, i, mc)) || validMeld(mc, types[i], 0);
           s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) });
         });
         p.down = true;
@@ -574,7 +597,7 @@
       if (R.fromHand && left > 1) return 'In dieser Runde muss komplett aus der Hand ausgemacht werden (höchstens 1 Karte zum Abwerfen übrig).';
       removeFromHand(p, cards);
       meldCards.forEach((mc, i) => {
-        const arr = validMeld(mc, types[i], 0, mc[0].joker && !mc[mc.length - 1].joker ? 'low' : undefined);
+        const arr = validMeld(mc, types[i], 0, meldPref(a, i, mc)) || validMeld(mc, types[i], 0);
         s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) });
       });
       p.down = true;
@@ -1064,6 +1087,6 @@
 
   return {
     SUITS, SUIT_SYM, SUIT_NAME, ROUNDS, TYPE_NAME, RANK_LABEL, isRed, rankLabel, normPos, cardLabel, cardPoints, handPoints,
-    validMeld, layOffResult, checkMeld, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock, botLastLay,
+    validMeld, runChoices, layOffResult, checkMeld, suggest, matchContract, slotLabel, fitsSlot, newGame, act, view, botAction, findContract, GameHost, canKnock, botLastLay,
   };
 });

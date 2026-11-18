@@ -252,6 +252,8 @@
     [/2–6 Spieler\. Warte, bis alle drin sind, und starte dann\./g, '2–6 players. Wait until everyone has joined, then start.'],
     [/Warte, bis der Gastgeber das Spiel startet…/g, 'Waiting for the host to start the game…'],
     [/Raum verlassen/g, 'Leave room'],
+    [/🃏 Wofür steht der Joker\?/g, '🃏 What does the joker stand for?'], [/ – tippe die gewünschte Reihenfolge an\./g, ' – tap the order you want.'],
+    [/Joker = /g, 'Joker = '], [/ \(rot\)/g, ' (red)'], [/ \(schwarz\)/g, ' (black)'], [/^Abbrechen$/g, 'Cancel'], [/\((\d) von (\d)\)/g, '($1 of $2)'],
     // Spielfläche
     [/^Übernehmen$/g, 'Apply'], [/✓ draußen/g, '✓ down'], [/du warst zuerst/g, 'you were first'], [/geklopft 👊/g, 'knocked 👊'],
     [/👊 Klopfen/g, '👊 Knock'], [/^Gesucht:$/g, 'Needed:'], [/Deine Auslage/g, 'Your melds'],

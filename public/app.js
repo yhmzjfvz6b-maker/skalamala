@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.58 · 16.11.2026';
+  const VERSION = '1.59 · 18.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -1100,8 +1100,8 @@
       if (!v.players[v.seat].down) { toast('Erst die Vorgabe auslegen, dann anlegen.'); return render(); }
       const ids = ui.selected.includes(d.id) ? ui.selected.slice() : [d.id];
       ui.selected = []; ui.pendingRender = false;
-      ui.ctl.act({ type: 'layOff', cardIds: ids, meldId: +onMeld.dataset.meld, pos: meldEnd(onMeld, e.clientX) });
-      return render();
+      render();
+      return layOffWithJoker(v, +onMeld.dataset.meld, ids, meldEnd(onMeld, e.clientX));
     }
     if (!cancel && d.fromPile) {
       // aus dem Sammelstapel zurück in die Hand
@@ -1132,6 +1132,70 @@
     const a = cs[0].getBoundingClientRect(), b = cs[cs.length - 1].getBoundingClientRect();
     return x < (a.left + b.right) / 2 ? 'start' : 'end';
   }
+
+  // ---------- Joker-Platz wählen: wofür steht der Joker in der Sequenz? ----------
+  function jokerOptionsHTML(t, arr) {
+    const m = { t, cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) };
+    return `<div class="meld jopt" data-mt="${t}">${m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})).join('')}</div>`;
+  }
+  function jokerNames(t, arr) {
+    const m = { t, cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) };
+    return m.cards.map((c, k) => {
+      if (!c.joker) return null;
+      const lk = jokerLook(m, k);
+      return E.rankLabel(m.ranks[k]) + (lk.repSuit ? E.SUIT_SYM[lk.repSuit] : lk.repColor === 'red' ? ' (rot)' : lk.repColor === 'black' ? ' (schwarz)' : '');
+    }).filter(Boolean).join(', ');
+  }
+  // items: [{ t, opts: [{ value, arr }] }] – fragt nacheinander, done(values) am Ende; Abbrechen = nichts tun
+  function pickJoker(items, done) {
+    const vals = [];
+    (function ask(i) {
+      if (i >= items.length) { closeModal(); return done(vals); }
+      const it = items[i];
+      if (it.opts.length < 2) { vals.push(it.opts.length ? it.opts[0].value : undefined); return ask(i + 1); }
+      ui.modalKind = 'joker';
+      openModal(`<h2>🃏 Wofür steht der Joker?</h2>
+        <p class="hint">${E.TYPE_NAME[it.t]}${items.length > 1 ? ` (${i + 1} von ${items.length})` : ''} – tippe die gewünschte Reihenfolge an.</p>
+        <div class="jchoices">${it.opts.map((o, k) => `<button class="jchoice" data-jk="${k}">${jokerOptionsHTML(it.t, o.arr)}<span>Joker = <b>${esc(jokerNames(it.t, o.arr))}</b></span></button>`).join('')}</div>
+        <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" data-close>Abbrechen</button></div>`, (e) => {
+        const b = e.target.closest('[data-jk]');
+        if (!b) return;
+        vals.push(it.opts[+b.dataset.jk].value);
+        ask(i + 1);
+      });
+    })(0);
+  }
+  // Auslegen: für jede Sequenz mit Joker die Möglichkeiten sammeln
+  function layDownWithJoker(v, melds) {
+    const byId = new Map(v.hand.map((c) => [c.id, c]));
+    const mcs = melds.map((ids) => ids.map((id) => byId.get(id)));
+    const types = E.matchContract(mcs, v.roundInfo.slots);
+    if (!types) return ui.ctl.act({ type: 'layDown', melds });
+    const items = mcs.map((mc, i) => ({ t: types[i], opts: E.runChoices(mc, types[i]).map((o) => ({ value: o.pref, arr: o.arr })) }));
+    if (!items.some((it) => it.opts.length > 1)) return ui.ctl.act({ type: 'layDown', melds });
+    pickJoker(items, (vals) => ui.ctl.act({ type: 'layDown', melds, jpref: vals.map((x) => (typeof x === 'number' || x === 'wrap' ? x : null)) }));
+  }
+  // Anlegen: Joker an eine Sequenz – vorne oder hinten?
+  function layOffWithJoker(v, meldId, ids, pos) {
+    const m = v.melds.find((x) => x.id === meldId);
+    const byId = new Map(v.hand.map((c) => [c.id, c]));
+    const cards = ids.map((id) => byId.get(id)).filter(Boolean);
+    const nj = cards.filter((c) => c.joker).length;
+    if (!m || !nj || (m.t !== 'S' && m.t !== 'A')) return ui.ctl.act({ type: 'layOff', cardIds: ids, meldId, pos });
+    const cand = cards.length === 1 ? [pos, pos === 'start' ? 'end' : 'start'] : Array.from({ length: nj + 1 }, (_, k) => k);
+    const opts = [], seen = new Set();
+    for (const c of cand) {
+      const r = E.layOffResult(m, cards, c);
+      if (!r || r.joker) continue;
+      const key = r.arr.map((x) => x.rank).join(',');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      opts.push({ value: c, arr: r.arr });
+    }
+    if (opts.length < 2) return ui.ctl.act({ type: 'layOff', cardIds: ids, meldId, pos });
+    pickJoker([{ t: m.t, opts }], (vals) => ui.ctl.act({ type: 'layOff', cardIds: ids, meldId, pos: vals[0] }));
+  }
+
   function layOff(meldId, pos) {
     const v = ui.view;
     if (!v) return;
@@ -1140,8 +1204,9 @@
     if (!v.players[v.seat].down) return toast('Erst die Vorgabe auslegen, dann anlegen.');
     if (v.ownLocked && (v.melds.find((m) => m.id === meldId) || {}).owner === v.seat) return toast('An deine eigenen Kombinationen erst ab deinem nächsten Zug anlegen.');
     if (!ui.selected.length) return toast('Wähle zuerst Karten aus deiner Hand.');
-    ui.ctl.act({ type: 'layOff', cardIds: ui.selected.slice(), meldId, pos });
+    const ids = ui.selected.slice();
     ui.selected = [];
+    layOffWithJoker(v, meldId, ids, pos);
   }
 
   function handle(a, el) {
@@ -1274,7 +1339,7 @@
         const c = contractFromPiles(v) || contractFromSelection(v);
         if (!c) return toast(`Deine Sammelstapel erfüllen die Vorgabe noch nicht: ${v.roundInfo.slots.map(E.slotLabel).join(' + ')}`, 3200);
         ui.selected = [];
-        return ui.ctl.act({ type: 'layDown', melds: c.melds });
+        return layDownWithJoker(v, c.melds);
       }
       case 'showResult': return showRoundEnd();
       case 'nextRound': if (!(ui.view && ui.view.multi)) closeModal(); return ui.ctl.act({ type: 'nextRound' });
