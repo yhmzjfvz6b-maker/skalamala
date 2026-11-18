@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.63 · 18.11.2026';
+  const VERSION = '1.64 · 18.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -22,11 +22,14 @@
   };
   let toastTimer;
   function toast(msg, ms) {
-    $toast.textContent = msg;
+    $toast.innerHTML = `<span class="tmsg"></span><span class="tx" aria-hidden="true">✕</span>`;
+    $toast.firstChild.textContent = msg;
     $toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => $toast.classList.remove('show'), ms || 2600);
+    toastTimer = setTimeout(() => $toast.classList.remove('show'), Math.max(ms || 0, 5000));
   }
+  // Meldung antippen = schließen
+  $toast.addEventListener('pointerdown', (e) => { e.stopPropagation(); clearTimeout(toastTimer); $toast.classList.remove('show'); });
   function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
   function openModal(html, onClick) {
     $modal.innerHTML = `<div class="sheet">${html}</div>`;
@@ -1422,6 +1425,7 @@
   function confirmLeave() { return true; }
 
   window.__skalamala = ui; // für Tests
+  window.__skToast = toast;
   // ---------- Start ----------
   applyLang();
   render();
