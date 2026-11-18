@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.60 · 18.11.2026';
+  const VERSION = '1.61 · 18.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -678,6 +678,28 @@
       </div>
     </div>`;
     layoutHand();
+    placeKnockPrompt();
+  }
+  // Klopf-Fenster neben die Ablage legen – die Karte, um die geklopft wird, bleibt sichtbar
+  function placeKnockPrompt() {
+    const kp = document.querySelector('.handzone .knockprompt.kbig');
+    if (!kp) return;
+    const hz = kp.closest('.handzone'), disc = hz && hz.querySelector('[data-drop="discard"]');
+    if (!disc) return;
+    disc.classList.add('kpglow');
+    const H = hz.getBoundingClientRect(), D = disc.getBoundingClientRect();
+    const left = D.right - H.left + 10, room = H.width - left - 6;
+    if (room >= 180) {
+      kp.classList.add('beside');
+      kp.style.left = left + 'px';
+      kp.style.width = Math.min(room, 640) + 'px';
+      kp.style.bottom = Math.max(6, H.bottom - D.bottom) + 'px';
+      kp.classList.toggle('narrow', room < 420);
+    } else {
+      // zu wenig Platz daneben: über die Stapel legen statt darauf
+      kp.classList.add('above');
+      kp.style.bottom = (H.bottom - D.top + 8) + 'px';
+    }
   }
 
   // Ich bin dran, jemand hat geklopft: genehmigen (nicken) oder selbst nehmen
@@ -737,7 +759,6 @@
   function renderKnockPrompt(v) {
     if (v.phase !== 'knock' || !v.knock.pending.includes(v.seat) || !ui.knockPrompt) return '';
     return `<div class="knockprompt kbig">
-      <div class="kpcard">${cardHTML(v.discardTop)}</div>
       <div class="kpmid">
         <h3>Klopfen?</h3>
         <div class="bar"><i id="kbar"></i></div>

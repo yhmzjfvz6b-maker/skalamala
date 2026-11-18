@@ -67,7 +67,11 @@
     if (!cfg.musicOn || loopTimer || !ctx()) return;
     nextAt = ac.currentTime + 0.1;
     schedule(nextAt); nextAt += TOTAL;
-    loopTimer = setInterval(() => { if (ac.currentTime > nextAt - 1.5) { schedule(nextAt); nextAt += TOTAL; } }, 300);
+    loopTimer = setInterval(() => {
+      if (ac.state !== 'running') return;
+      if (nextAt < ac.currentTime) nextAt = ac.currentTime + 0.1; // nach Pause/Hintergrund wieder sauber einsetzen
+      if (ac.currentTime > nextAt - 1.5) { schedule(nextAt); nextAt += TOTAL; }
+    }, 300);
   }
   function stopMusic() {
     if (loopTimer) clearInterval(loopTimer);
@@ -112,13 +116,15 @@
   }
 
   // Browser erlauben Ton erst nach einer Berührung/einem Klick
+  // Bei jeder Berührung prüfen, ob der Ton (z. B. nach Sperrbildschirm, Tab-Wechsel, Vollbild) wieder geweckt werden muss
   function unlock() {
-    if (unlocked) return;
     unlocked = true;
-    ctx();
-    if (cfg.musicOn) startMusic();
+    const a = ctx();
+    if (a && a.state !== 'running') { try { a.resume(); } catch (e) {} }
+    if (cfg.musicOn && cfg.musicVol > 0) startMusic();
   }
-  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+  ['pointerdown', 'pointerup', 'keydown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && unlocked && ac && ac.state !== 'running') { try { ac.resume(); } catch (e) {} } });
 
   function set(k, v) {
     cfg[k] = v; store.set(k, v);

@@ -1127,3 +1127,21 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .clocks b { color: #fff; font-weight: 700; }
 .clocks .tclock { color: var(--yellow); }
 @media (max-width: 640px) { .clocks { font-size: .68rem; } }
+
+/* 1.61: Klopf-Fenster neben der Ablage, Ablage leuchtet */
+.handzone .knockprompt.kbig.beside { transform: none; animation: popc .2s ease-out; min-height: 0; }
+.handzone .knockprompt.kbig.above { animation: popb .2s ease-out; }
+@keyframes popc { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+.handzone .knockprompt.kbig.narrow { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+.handzone .knockprompt.kbig.narrow h3 { font-size: 1.6rem; text-align: center; }
+.handzone .knockprompt.kbig.narrow .kpbtns { flex-direction: row; }
+.handzone .knockprompt.kbig.narrow .kpbtns .btn { flex: 1; min-width: 0; padding: 10px 8px; }
+.pile.kpglow { border-radius: 12px; box-shadow: 0 0 0 4px var(--yellow), 0 0 26px 6px rgba(255,214,0,.75); animation: kpglow 1s ease-in-out infinite alternate; }
+@keyframes kpglow { from { box-shadow: 0 0 0 3px var(--yellow), 0 0 14px 2px rgba(255,214,0,.5); } to { box-shadow: 0 0 0 5px var(--yellow), 0 0 30px 8px rgba(255,214,0,.85); } }
+@media (max-width: 640px) {
+  .handzone .knockprompt.kbig.narrow { padding: 8px 8px; gap: 6px; border-radius: 14px; }
+  .handzone .knockprompt.kbig.narrow h3 { font-size: 1.35rem; }
+  .handzone .knockprompt.kbig.narrow .bar { margin-top: 4px; }
+  .handzone .knockprompt.kbig.narrow .kpbtns { gap: 6px; }
+  .handzone .knockprompt.kbig.narrow .kpbtns .btn { font-size: .95rem; padding: 9px 4px; }
+}
