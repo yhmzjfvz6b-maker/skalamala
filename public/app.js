@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.62 · 18.11.2026';
+  const VERSION = '1.63 · 18.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -180,6 +180,7 @@
     name: store.get('name', ''),
     bots: store.get('bots', 2),
     knockPrompt: store.get('knockPrompt', true),
+    tipSmall: store.get('tipSmall', false),
     tips: store.get('tips', true),
     lang: store.get('lang', 'de'),
     sort: store.get('sort', 'suit'),
@@ -523,7 +524,7 @@
     ui.tip = tip;
     const tipIds = new Set(tip ? tip.ids : []);
     const tipBar = !v.tips ? '' : tip
-      ? `<div class="tipbar"><span>💡 ${esc(tip.text)}</span>${tip.melds && !ui.piles.length ? '<button class="btn small green" data-a="tipApply">Übernehmen</button>' : ''}</div>`
+      ? `<div class="tipbar ${ui.tipSmall ? 'small' : 'big'}" data-a="tipToggle" title="${ui.tipSmall ? 'Antippen: Tipp groß anzeigen' : 'Antippen: Tipp klein machen'}"><span>💡 ${esc(tip.text)}</span><i class="tiptog">${ui.tipSmall ? '⤢' : '⤡'}</i>${tip.melds && !ui.piles.length ? '<button class="btn small green" data-a="tipApply">Übernehmen</button>' : ''}</div>`
       : '';
 
     // Spieler-Leiste
@@ -1369,6 +1370,7 @@
       case 'sortRank': ui.sort = 'rank'; store.set('sort', 'rank'); return render();
       case 'sortAlt': ui.sort = ui.sort === 'alt' ? 'altd' : 'alt'; store.set('sort', ui.sort); return render();
       case 'fullscreen': toggleFullscreen(); return;
+      case 'tipToggle': ui.tipSmall = !ui.tipSmall; store.set('tipSmall', ui.tipSmall); return render();
       case 'clearSel': ui.selected = []; return render();
       case 'drawStock': return ui.ctl.act({ type: 'drawStock' });
       case 'rejectKnock': return ui.ctl.act({ type: 'rejectKnock' });
