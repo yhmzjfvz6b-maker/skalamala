@@ -11,16 +11,18 @@
   };
   let ac = null, musicBus = null, sfxBus = null, loopTimer = null, nextAt = 0, unlocked = false;
 
+  function wake(a) { if (!a || a.state === 'closed') return; try { const r = a.resume(); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
   function ctx() {
     if (!ac) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} // iPhone: Ton auch bei Stummschalter wie ein Spiel
       ac = new AC();
       musicBus = ac.createGain(); musicBus.connect(ac.destination);
       sfxBus = ac.createGain(); sfxBus.connect(ac.destination);
       applyVol();
     }
-    if (ac.state === 'suspended') ac.resume();
+    if (ac.state === 'suspended') wake(ac);
     return ac;
   }
   function applyVol() {
@@ -117,25 +119,45 @@
 
   // Browser erlauben Ton erst nach einer Berührung/einem Klick
   // Bei jeder Berührung prüfen, ob der Ton (z. B. nach Sperrbildschirm, Tab-Wechsel, Vollbild) wieder geweckt werden muss
-  function unlock() {
-    unlocked = true;
+  // Ton-Motor komplett neu starten (iPad/iPhone: nach App- oder Tab-Wechsel bleibt der alte oft stumm)
+  function rebuild() {
+    const old = ac;
+    if (loopTimer) clearInterval(loopTimer);
+    loopTimer = null; ac = null;
+    try { if (old && old.state !== 'closed') old.close(); } catch (e) {}
     const a = ctx();
-    if (a && a.state !== 'running') { try { a.resume(); } catch (e) {} }
+    if (!a) return;
+    try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); } catch (e) {}
+  }
+  let wasHidden = false, badSince = 0, lastRebuild = 0;
+  function unlock() {
+    const first = !unlocked;
+    unlocked = true;
+    let a = ctx();
+    if (a && a.state !== 'running' && !first) {
+      const now = Date.now();
+      if (!badSince) badSince = now;
+      // nach einem Fenster-Wechsel sofort, sonst wenn er länger hängt: neu starten – immer innerhalb der Berührung
+      if ((wasHidden || now - badSince > 400) && now - lastRebuild > 1000) { rebuild(); lastRebuild = now; badSince = 0; }
+      else wake(a);
+    } else if (a && a.state === 'running') badSince = 0;
+    wasHidden = false;
     if (cfg.musicOn && cfg.musicVol > 0) startMusic();
   }
   ['pointerdown', 'pointerup', 'keydown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
   // Wächter: hat der Browser den Ton angehalten (Kopfhörer gewechselt, Energiesparen, anderer Ton …), wieder wecken
   setInterval(() => {
     if (!unlocked || !ac || document.hidden) return;
-    if (ac.state === 'closed') {
-      if (loopTimer) clearInterval(loopTimer);
-      loopTimer = null; ac = null;
-      if (ctx() && cfg.musicOn && cfg.musicVol > 0) startMusic();
-      return;
-    }
-    if (ac.state !== 'running') { try { ac.resume(); } catch (e) {} }
+    if (ac.state !== 'running') wake(ac);
   }, 2000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && unlocked && ac && ac.state !== 'running') { try { ac.resume(); } catch (e) {} } });
+  // Fenster weg: Ton sauber anhalten; zurück: wecken (Desktop sofort, iPad beim nächsten Antippen)
+  document.addEventListener('visibilitychange', () => {
+    if (!unlocked || !ac) return;
+    if (document.hidden) { wasHidden = true; try { const r = ac.suspend(); if (r && r.catch) r.catch(() => {}); } catch (e) {} return; }
+    if (ac.state === 'closed') return;
+    try { const r = ac.resume(); if (r && r.then) r.then(() => { if (ac && ac.state === 'running') wasHidden = false; }).catch(() => {}); } catch (e) {}
+  });
+  window.addEventListener('pageshow', () => { if (unlocked && ac && ac.state !== 'running') wasHidden = true; });
 
   function set(k, v) {
     cfg[k] = v; store.set(k, v);
