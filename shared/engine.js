@@ -596,7 +596,7 @@
       if (!cards) return 'Karten nicht auf der Hand';
       const meldCards = a.melds.map((ids) => ids.map((id) => cards.find((c) => c.id === id)));
       const types = matchContract(meldCards, R.slots);
-      if (!types) return `Beim Auslegen genau die Vorgabe: ${R.slots.map(slotLabel).join(' + ')}. Weitere Karten danach anlegen – bei Gegenspielern sofort, bei dir erst im nächsten Zug.`;
+      if (!types) return `Beim Auslegen genau die Vorgabe: ${R.slots.map(slotLabel).join(' + ')}. Anlegen erst ab deinem nächsten Zug.`;
       const left = p.hand.length - cards.length;
       if (R.fromHand && left > 1) return 'In dieser Runde muss komplett aus der Hand ausgemacht werden (höchstens 1 Karte zum Abwerfen übrig).';
       removeFromHand(p, cards);
@@ -624,7 +624,7 @@
       if (!p.down) return 'Erst die Vorgabe auslegen, dann anlegen';
       const m = s.melds.find((x) => x.id === a.meldId);
       if (!m) return 'Kombination nicht gefunden';
-      if (m.owner === seat && p.downTurn === s.turn) return 'An deine eigenen Kombinationen darfst du erst ab deinem nächsten Zug anlegen – an die der Gegenspieler sofort.';
+      if (p.downTurn === s.turn) return 'Im Zug des Auslegens wird nur die Vorgabe ausgelegt – anlegen (bei dir und den Gegenspielern) erst ab deinem nächsten Zug.';
       const ids = a.cardIds || (a.cardId != null ? [a.cardId] : []);
       const cards = takeFromHand(p, ids);
       if (!cards || !cards.length) return 'Karten nicht auf der Hand';
@@ -848,7 +848,7 @@
   function canLayOffAny(s, c, seat) {
     const p = seat != null ? s.players[seat] : null;
     const locked = p && p.downTurn === s.turn;
-    return s.melds.find((m) => !(locked && m.owner === seat) && layOffResult(m, [c]));
+    return !locked && s.melds.find((m) => layOffResult(m, [c]));
   }
 
   // Nach dem Ausmachen eines anderen: Vorgabe noch auslegen, wenn möglich

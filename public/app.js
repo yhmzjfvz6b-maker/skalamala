@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.61 · 18.11.2026';
+  const VERSION = '1.62 · 18.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -496,7 +496,7 @@
       const p = v.players[me];
       if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Genau die Vorgabe auslegen – oder abwerfen', mine: true };
       if (v.mustPlay && v.mustPlay.length && v.hand.some((c) => v.mustPlay.includes(c.id))) return { t: '🔄 Joker eingetauscht – lege ihn jetzt an eine beliebige Kombination an', mine: true };
-      if (v.ownLocked) return { t: 'Ausgelegt! Jetzt abwerfen – anlegen nur bei Gegenspielern, bei dir erst im nächsten Zug', mine: true };
+      if (v.ownLocked) return { t: 'Ausgelegt! Jetzt abwerfen – anlegen erst ab deinem nächsten Zug', mine: true };
       return { t: 'Anlegen: Karte wählen, dann auf eine Kombination tippen – zum Schluss abwerfen', mine: true };
     }
     return { t: `${cur.name} ist dran${v.phase === 'draw' ? ' (zieht)' : ''}…`, mine: false };
@@ -573,7 +573,7 @@
       if (!ms.length) continue;
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
-          const ok = layTarget && !(v.ownLocked && m.owner === me) && E.layOffResult(m, ui.selected.map((id) => handById.get(id)));
+          const ok = layTarget && !v.ownLocked && E.layOffResult(m, ui.selected.map((id) => handById.get(id)));
           return `<div class="meld ${m.late ? 'late' : ''} ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})).join('')}</div>`;
         }).join('')}
       </div></div>`);
@@ -813,7 +813,7 @@
       <h3>Ablauf eines Zuges</h3>
       <ol>
         <li><b>Ziehen:</b> die oberste Karte der Ablage oder eine verdeckte vom Stapel.</li>
-        <li><b>Auslegen:</b> Wer die Vorgabe der Runde auf der Hand hat, legt sie aus. Danach darf man an alle Kombinationen auf dem Tisch anlegen (auch im selben Zug).</li>
+        <li><b>Auslegen:</b> Wer die Vorgabe der Runde auf der Hand hat, legt sie aus. Ab dem <b>nächsten Zug</b> darf man an alle Kombinationen auf dem Tisch anlegen.</li>
         <li><b>Abwerfen:</b> eine Karte auf die Ablage – dann ist der Nächste (im Uhrzeigersinn) dran.</li>
       </ol>
       <h3>Klopfen 👊</h3>
@@ -829,10 +829,10 @@
         <li><b>Sequenz (Straße):</b> mind. 4 aufeinanderfolgende Karten derselben Farbe, z. B. ♠10 B D K. Das Ass zählt hoch (D-K-A) oder niedrig (A-2-3) – auch rundherum ist erlaubt (K-A-2).</li>
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
         <li><b>Joker</b> ersetzen jede beliebige Karte – in jeder Kombination muss aber mindestens <b>eine echte Karte mehr</b> liegen als Joker (2 Karten + 1 Joker, 3 Karten + 2 Joker …).</li>
-        <li><b>Joker an eine Sequenz anlegen:</b> Zieh den Joker auf die linke oder rechte Hälfte der Sequenz – dort kommt er hin (vorne oder hinten). Beim ersten Auslegen gilt: Liegt der Joker im Sammelstapel ganz vorne, kommt er an den Anfang der Sequenz.</li>
+        <li><b>Joker in einer Sequenz:</b> Kann der Joker für verschiedene Karten stehen (vorne oder hinten), fragt das Spiel beim Auslegen und Anlegen, wofür er stehen soll – einfach die gewünschte Reihenfolge antippen.</li>
         <li><b>Joker tauschen:</b> Nach dem ersten Auslegen darfst du die passende echte Karte auf den Platz eines Jokers legen. Der Joker kommt auf deine Hand und muss im selben Zug wieder an eine beliebige Kombination angelegt werden.</li>
         <li>Beim <b>ersten Auslegen</b> wird <b>genau die Vorgabe</b> ausgelegt – z. B. in Runde 1 genau eine Gruppe aus 3 Karten und eine Sequenz aus 4 Karten. Steht „mind.“ dabei, darf die Kombination länger sein.</li>
-        <li>Im selben Zug darf man danach nur bei den <b>Gegenspielern</b> anlegen. An die <b>eigenen</b> Kombinationen erst ab dem nächsten Zug.</li>
+        <li>In dem Zug, in dem man auslegt, wird <b>nur die Vorgabe</b> ausgelegt. <b>Anlegen</b> – an die eigenen und an die Kombinationen der Gegenspieler – erst ab dem <b>nächsten Zug</b>.</li>
       </ul>
       <h3>Die 8 Runden</h3>
       <ol>${E.ROUNDS.map((r) => `<li><b>${esc(r.title)}</b> – ${esc(r.detail)}</li>`).join('')}</ol>
@@ -852,7 +852,7 @@
       <h3>A turn</h3>
       <ol>
         <li><b>Draw:</b> the top card of the discard pile or a face-down card from the stock.</li>
-        <li><b>Meld:</b> if you hold the round's contract, lay it down. After that you may lay off cards on all melds on the table (also in the same turn).</li>
+        <li><b>Meld:</b> if you hold the round's contract, lay it down. From your <b>next turn</b> on you may lay off cards on all melds on the table.</li>
         <li><b>Discard:</b> one card onto the discard pile – then it's the next player's turn (clockwise).</li>
       </ol>
       <h3>Knocking 👊</h3>
@@ -871,7 +871,7 @@
         <li><b>Laying a joker on a run:</b> drag the joker onto the left or right half of the run – that's where it goes (front or back). For your first meld: if the joker is first in the collect pile, it goes to the start of the run.</li>
         <li><b>Swapping a joker:</b> after your first meld you may place the matching real card on a joker's spot. The joker goes to your hand and must be laid off again on any meld in the same turn.</li>
         <li>For your <b>first meld</b> you lay down <b>exactly the contract</b> – e.g. in round 1 exactly a group of 3 cards and a run of 4 cards. If it says „at least“, the meld may be longer.</li>
-        <li>In the same turn you may then only lay off on <b>opponents'</b> melds. On your <b>own</b> melds from your next turn.</li>
+        <li>In the turn you meld, you lay down <b>only the contract</b>. <b>Laying off</b> – on your own and your opponents' melds – starts with your <b>next turn</b>.</li>
       </ul>
       <h3>The 8 rounds</h3>
       <ol>${RT.map((t, i) => `<li><b>${t}</b> – ${RD[i]}</li>`).join('')}</ol>
@@ -1263,7 +1263,7 @@
     if (v.current === v.seat && v.phase === 'draw') return toast('Bitte erst eine Karte nehmen – vom Stapel oder von der Ablage.');
     if (v.current !== v.seat || v.phase !== 'play') return toast('Du bist noch nicht dran.');
     if (!v.players[v.seat].down) return toast('Erst die Vorgabe auslegen, dann anlegen.');
-    if (v.ownLocked && (v.melds.find((m) => m.id === meldId) || {}).owner === v.seat) return toast('An deine eigenen Kombinationen erst ab deinem nächsten Zug anlegen.');
+    if (v.ownLocked) return toast('Anlegen erst ab deinem nächsten Zug – bei dir und bei den Gegenspielern.');
     if (!ui.selected.length) return toast('Wähle zuerst Karten aus deiner Hand.');
     const ids = ui.selected.slice();
     ui.selected = [];

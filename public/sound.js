@@ -124,6 +124,17 @@
     if (cfg.musicOn && cfg.musicVol > 0) startMusic();
   }
   ['pointerdown', 'pointerup', 'keydown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+  // Wächter: hat der Browser den Ton angehalten (Kopfhörer gewechselt, Energiesparen, anderer Ton …), wieder wecken
+  setInterval(() => {
+    if (!unlocked || !ac || document.hidden) return;
+    if (ac.state === 'closed') {
+      if (loopTimer) clearInterval(loopTimer);
+      loopTimer = null; ac = null;
+      if (ctx() && cfg.musicOn && cfg.musicVol > 0) startMusic();
+      return;
+    }
+    if (ac.state !== 'running') { try { ac.resume(); } catch (e) {} }
+  }, 2000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && unlocked && ac && ac.state !== 'running') { try { ac.resume(); } catch (e) {} } });
 
   function set(k, v) {

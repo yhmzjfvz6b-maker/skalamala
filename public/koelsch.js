@@ -165,7 +165,10 @@
     [/Der Stapel ist aufgebraucht\./g, 'The stock is used up.'],
     // Fehlermeldungen
     [/In dieser Runde werden genau (\d+) Kombinationen? ausgelegt: (.+?)\. Weitere Karten danach anlegen\./g, 'This round you meld exactly $1 combination(s): $2. Lay off further cards afterwards.'],
-    [/Beim Auslegen genau die Vorgabe: (.+?)\. Weitere Karten danach anlegen – bei Gegenspielern sofort, bei dir erst im nächsten Zug\./g, 'Meld exactly the contract: $1. Lay off further cards afterwards – on opponents right away, on your own melds from your next turn.'],
+    [/Beim Auslegen genau die Vorgabe: (.+?)\. Anlegen erst ab deinem nächsten Zug\./g, 'Meld exactly the contract: $1. Laying off starts with your next turn.'],
+    [/Im Zug des Auslegens wird nur die Vorgabe ausgelegt – anlegen \(bei dir und den Gegenspielern\) erst ab deinem nächsten Zug\./g, 'In the turn you meld, only the contract is laid down – laying off (yours and opponents\' melds) starts with your next turn.'],
+    [/Anlegen erst ab deinem nächsten Zug – bei dir und bei den Gegenspielern\./g, 'Laying off starts with your next turn – on your own and opponents\' melds.'],
+    [/Ausgelegt! Jetzt abwerfen – anlegen erst ab deinem nächsten Zug/g, 'Melded! Now discard – laying off starts with your next turn'],
     [/In dieser Runde muss komplett aus der Hand ausgemacht werden \(höchstens 1 Karte zum Abwerfen übrig\)\./g, 'This round you must go out entirely from your hand (at most 1 card left to discard).'],
     [/An deine eigenen Kombinationen darfst du erst ab deinem nächsten Zug anlegen – an die der Gegenspieler sofort\./g, 'You can lay off on your own melds from your next turn – on opponents\' melds right away.'],
     [/An deine eigenen Kombinationen erst ab deinem nächsten Zug anlegen\./g, 'You can lay off on your own melds from your next turn.'],
