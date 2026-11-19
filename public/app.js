@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.65 · 18.11.2026';
+  const VERSION = '1.66 · 19.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -496,6 +496,7 @@
     }
     if (v.current === me) {
       if (v.phase === 'draw' && v.knock.first != null) return { t: `${v.players[v.knock.first].name} klopft – 👍 oder 👎?`, mine: true };
+      if (v.phase === 'draw' && v.knock.after) return { t: 'Klopfer hat die Karte – zieh jetzt vom Stapel oder von der Ablage', mine: true };
       if (v.phase === 'draw') return { t: 'Du bist dran – zieh eine Karte (Stapel oder Ablage)', mine: true };
       const p = v.players[me];
       if (!p.down) return { t: R.fromHand ? 'Ausmachen (alles aus der Hand) oder eine Karte abwerfen' : 'Genau die Vorgabe auslegen – oder abwerfen', mine: true };
@@ -714,10 +715,10 @@
       <div class="kpcard">${cardHTML(v.discardTop)}</div>
       <div class="kpmid">
         <h3>${esc(who)} klopft!</h3>
-        <div class="kpinfo">👍 Karte + Strafkarte für ${esc(who)} · 👎 du nimmst die Karte selbst, ohne Strafkarte</div>
+        <div class="kpinfo">👍 Karte + Strafkarte für ${esc(who)}, danach ziehst du · 👎 du nimmst die Karte selbst, ohne Strafkarte</div>
       </div>
       <div class="thumbs">
-        <button class="thumb up" data-a="drawStock" aria-label="Zustimmen" title="Zustimmen: ${esc(who)} bekommt die Karte + 1 Strafkarte, du ziehst verdeckt.">👍</button>
+        <button class="thumb up" data-a="drawStock" aria-label="Zustimmen" title="Zustimmen: ${esc(who)} bekommt die Karte + 1 Strafkarte, danach ziehst du vom Stapel oder der Ablage.">👍</button>
         <button class="thumb down" data-a="rejectKnock" aria-label="Ablehnen" title="Ablehnen: du nimmst die offene Karte selbst – ohne Strafkarte">👎</button>
       </div>
     </div>`;
@@ -821,7 +822,7 @@
         <li><b>Abwerfen:</b> eine Karte auf die Ablage – dann ist der Nächste (im Uhrzeigersinn) dran.</li>
       </ol>
       <h3>Klopfen 👊</h3>
-      <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Es gilt: <b>wer zuerst klopft</b>, bekommt die Karte – der Spieler am Zug hat aber immer Vorrang: er kann zustimmen (👍) oder ablehnen (👎 – dann nimmt er die offene Karte selbst, ohne Strafkarte). Die Abfrage bleibt stehen, bis er sich entschieden hat. Zieht er vom Stapel, bekommt der erste Klopfer die Karte <b>plus eine verdeckte Strafkarte</b>. In Runde 6 darf nicht geklopft werden.</p>
+      <p>Bevor der Spieler, der dran ist, vom Stapel zieht, dürfen die anderen um die offene Karte klopfen. Es gilt: <b>wer zuerst klopft</b>, bekommt die Karte – der Spieler am Zug hat aber immer Vorrang: er kann zustimmen (👍) oder ablehnen (👎 – dann nimmt er die offene Karte selbst, ohne Strafkarte). Die Abfrage bleibt stehen, bis er sich entschieden hat. Stimmt er zu, bekommt der erste Klopfer die Karte <b>plus eine verdeckte Strafkarte</b> – danach zieht der Spieler am Zug ganz normal <b>vom Stapel oder von der Ablage</b>. In Runde 6 darf nicht geklopft werden.</p>
       <h3>Bedienung</h3>
       <p>Karten <b>antippen</b> zum Auswählen. Karten <b>ziehen</b>, um sie in deine Wunsch-Reihenfolge zu bringen („Farbe“ oder „Wert“ sortiert automatisch). Eine Karte auf die Ablage ziehen wirft sie ab, auf eine Kombination ziehen legt sie an.</p>
       <p><b>Groß ansehen:</b> Mit der Maus über eine Kombination, einen Sammelstapel oder die Ablage fahren – die Karten treten größer hervor. Auf Handy/Tablet: den Finger kurz darauf halten.</p>
@@ -860,7 +861,7 @@
         <li><b>Discard:</b> one card onto the discard pile – then it's the next player's turn (clockwise).</li>
       </ol>
       <h3>Knocking 👊</h3>
-      <p>Before the player whose turn it is draws from the stock, the others may knock for the face-up card. <b>Whoever knocks first</b> gets the card – but the player on turn always has priority: they can approve (👍) or reject (👎 – then they take the face-up card themselves, without a penalty card). The question stays until they decide. If they draw from the stock, the first knocker gets the card <b>plus a face-down penalty card</b>. No knocking in round 6.</p>
+      <p>Before the player whose turn it is draws from the stock, the others may knock for the face-up card. <b>Whoever knocks first</b> gets the card – but the player on turn always has priority: they can approve (👍) or reject (👎 – then they take the face-up card themselves, without a penalty card). The question stays until they decide. If they approve, the first knocker gets the card <b>plus a face-down penalty card</b> – then the player on turn draws as usual <b>from the stock or the discard pile</b>. No knocking in round 6.</p>
       <h3>Controls</h3>
       <p><b>Tap</b> cards to select them. <b>Drag</b> cards to put them in your preferred order („Suit“ or „Rank“ sorts automatically). Dragging a card onto the discard pile discards it, dragging it onto a meld lays it off.</p>
       <p><b>Enlarge:</b> move the mouse over a meld, a collect pile or the discard pile – the cards pop out larger. On phone/tablet: hold your finger on it briefly.</p>

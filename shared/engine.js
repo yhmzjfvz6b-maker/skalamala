@@ -383,6 +383,13 @@
       if (pen) p.hand.push(pen);
       gave(s, winner, pen ? [c.id, pen.id] : [c.id]);
       log(s, `👊 ${p.name} klopft und nimmt ${cardLabel(c)} + 1 verdeckte Karte.`);
+      // Ein Mensch am Zug entscheidet danach selbst: Stapel oder (neue) oberste Karte der Ablage
+      const curAuto = s.autoSeats ? s.autoSeats[s.current] : s.players[s.current].bot;
+      if (!curAuto) {
+        s.knock = { responses: {}, deadline: 0, order: [], rejected: true, after: true };
+        s.phase = 'draw';
+        return;
+      }
     }
     const c = drawFromStock(s);
     s.knock = { responses: {}, deadline: 0, order: [] };
@@ -695,6 +702,7 @@
         responses: Object.assign({}, s.knock.responses),
         first: firstKnocker(s),
         approveDeadline: s.knock.approveDeadline || 0,
+        after: !!s.knock.after,
         deadline: s.knock.deadline,
         canKnock: canKnock(s, seat),
         pending: s.phase === 'knock' ? knockPending(s) : [],
