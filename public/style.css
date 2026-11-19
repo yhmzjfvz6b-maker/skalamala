@@ -1170,3 +1170,9 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 /* 1.67: Auswahl-Knöpfe umbrechen statt überlaufen */
 .modesel { flex-wrap: wrap; max-width: 100%; }
 .modesel .btn { white-space: nowrap; }
+
+/* 1.68: Joker umsetzen, solange man am Zug ist */
+.meld .mvj { align-self: center; margin-left: 6px; flex: none; border: 2px solid var(--yellow); background: rgba(255,214,0,.18); color: #fff; font: inherit; font-weight: 800; font-size: .78rem; padding: 5px 9px; border-radius: 999px; cursor: pointer; white-space: nowrap; animation: kpglow 1.2s ease-in-out infinite alternate; }
+.meld .mvj:hover { background: var(--yellow); color: var(--navy); }
+.meld .mvj { margin-left: 10px !important; position: relative; z-index: 6; }
+.meld .card:has(+ .mvj) { margin-right: 0; }

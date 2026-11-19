@@ -255,6 +255,8 @@
     [/2–6 Spieler\. Warte, bis alle drin sind, und starte dann\./g, '2–6 players. Wait until everyone has joined, then start.'],
     [/Warte, bis der Gastgeber das Spiel startet…/g, 'Waiting for the host to start the game…'],
     [/Raum verlassen/g, 'Leave room'],
+    [new RegExp('🔀 ' + N + ' setzt den Joker in der (Sequenz|Skalamala) um\\.', 'g'), '🔀 $1 moves the joker in the $2.'], [/🔀 Joker/g, '🔀 Joker'],
+    [/Umlegen geht nur bei Karten, die du in diesem Zug ausgelegt hast\./g, 'You can only rearrange cards you laid down this turn.'], [/Der Joker kann hier nirgendwo anders stehen\./g, 'The joker cannot stand anywhere else here.'],
     [new RegExp('🔄 ' + N + ' tauscht ' + C + ' gegen den Joker und nimmt ihn auf die Hand\\.', 'g'), '🔄 $1 swaps $2 for the joker and takes it into their hand.'],
     [/^Getauschter Joker:?$/g, 'Swapped joker'], [/🃏 Behalten/g, '🃏 Keep'], [/🔁 Wieder auslegen/g, '🔁 Lay off again'],
     [/Ein eingetauschter Joker muss im selben Zug wieder an eine Kombination angelegt werden\./g, 'A swapped joker must be laid off again on a meld in the same turn.'],

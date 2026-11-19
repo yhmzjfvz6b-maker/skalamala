@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.67 · 19.11.2026';
+  const VERSION = '1.68 · 19.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -592,7 +592,7 @@
       groups.push(`<div class="mgroup"><div class="who">${avatar(v.players[i].name, i)}${esc(i === me ? 'Deine Auslage' : v.players[i].name)}</div><div class="mrow">
         ${ms.map((m) => {
           const ok = layTarget && !v.ownLocked && E.layOffResult(m, ui.selected.map((id) => handById.get(id)));
-          return `<div class="meld ${m.late ? 'late' : ''} ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})).join('')}</div>`;
+          return `<div class="meld ${m.late ? 'late' : ''} ${ok ? 'target' : ''} ${tip && tip.meldId === m.id ? 'tipm' : ''}" data-meld="${m.id}" data-mt="${m.t}"><span class="mt">${E.TYPE_NAME[m.t]}</span>${m.cards.map((c, k) => cardHTML(c, c.joker ? Object.assign({ rep: m.ranks[k] }, jokerLook(m, k)) : {})).join('')}${m.movable ? `<button class="mvj" data-a="moveJoker" data-mid="${m.id}" title="Joker in dieser Sequenz umsetzen – geht nur, solange du am Zug bist">🔀 Joker</button>` : ''}</div>`;
         }).join('')}
       </div></div>`);
     }
@@ -1022,6 +1022,8 @@
   $app.addEventListener('click', (e) => {
     if (ui.suppressTap && Date.now() - ui.suppressTap < 700) return;
     if (e.target.closest('#hand .card, #pilerow .card')) return; // per Zeiger-Logik (Tippen/Ziehen)
+    const mvj = e.target.closest('[data-a="moveJoker"]');
+    if (mvj) return handle('moveJoker', mvj);
     const meldEl = e.target.closest('[data-meld]');
     if (meldEl) {
       if (!ui.selected.length) return;
@@ -1231,7 +1233,7 @@
     (function ask(i) {
       if (i >= items.length) { closeModal(); return done(vals); }
       const it = items[i];
-      if (it.opts.length < 2) { vals.push(it.opts.length ? it.opts[0].value : undefined); return ask(i + 1); }
+      if (it.opts.length < (it.force ? 1 : 2)) { vals.push(it.opts.length ? it.opts[0].value : undefined); return ask(i + 1); }
       ui.modalKind = 'joker';
       openModal(`<h2>🃏 Wofür steht der Joker?</h2>
         <p class="hint">${E.TYPE_NAME[it.t]}${items.length > 1 ? ` (${i + 1} von ${items.length})` : ''} – tippe die gewünschte Reihenfolge an.</p>
@@ -1344,6 +1346,15 @@
       case 'kick': return ui.ctl.send({ t: 'kick', seat: +el.dataset.seat });
       case 'start': return ui.ctl.send({ t: 'start' });
       case 'roomTips': return ui.ctl.send({ t: 'tips', on: el.dataset.v === '1' });
+      case 'moveJoker': {
+        const v = ui.view, m = v && v.melds.find((x) => x.id === +el.dataset.mid);
+        if (!m) return;
+        const key = (arr) => arr.map((x) => x.rank).join(',');
+        const cur = m.ranks.join(',');
+        const opts = E.runChoices(m.cards, m.t).filter((o) => key(o.arr) !== cur).map((o) => ({ value: o.pref, arr: o.arr }));
+        if (!opts.length) return toast('Der Joker kann hier nirgendwo anders stehen.');
+        return pickJoker([{ t: m.t, opts, force: true }], (vals) => ui.ctl.act({ type: 'rearrange', meldId: m.id, pref: vals[0] }));
+      }
       case 'roomJoker': return ui.ctl.send({ t: 'jokerMust', on: el.dataset.v === '1' });
       case 'jokerFree': case 'jokerMust': ui.jokerMust = a === 'jokerMust'; store.set('jokerMust', ui.jokerMust); return render();
       case 'snd': {

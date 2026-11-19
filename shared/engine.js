@@ -609,7 +609,7 @@
       removeFromHand(p, cards);
       meldCards.forEach((mc, i) => {
         const arr = validMeld(mc, types[i], 0, meldPref(a, i, mc)) || validMeld(mc, types[i], 0);
-        s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank) });
+        s.melds.push({ id: ++s.meldSeq, owner: seat, t: types[i], cards: arr.map((x) => x.card), ranks: arr.map((x) => x.rank), touch: { turn: s.turn, seat } });
       });
       p.down = true;
       p.downTurn = s.turn;
@@ -644,6 +644,7 @@
       removeFromHand(p, cards);
       m.cards = res.arr.map((x) => x.card);
       m.ranks = res.arr.map((x) => x.rank);
+      if (cards.some((c) => c.joker)) m.touch = { turn: s.turn, seat };
       s.mustPlay = (s.mustPlay || []).filter((id) => !cards.some((c) => c.id === id));
       if (res.joker) {
         p.hand.push(res.joker);
@@ -657,6 +658,22 @@
       }
       log(s, `${p.name} legt ${cards.map(cardLabel).join(' ')} an.`);
       if (!p.hand.length) endRound(s, seat);
+      return null;
+    }
+
+    if (a.type === 'rearrange') {
+      // Solange man am Zug ist: Joker in einer gerade gelegten Sequenz noch umsetzen (z. B. von vorne nach hinten)
+      const m = s.melds.find((x) => x.id === a.meldId);
+      if (!m) return 'Kombination nicht gefunden';
+      if (!m.touch || m.touch.turn !== s.turn || m.touch.seat !== seat) return 'Umlegen geht nur bei Karten, die du in diesem Zug ausgelegt hast.';
+      if (m.t !== 'S' && m.t !== 'A') return 'Nur bei Sequenzen kann der Joker umgesetzt werden.';
+      const pref = a.pref === 'wrap' ? 'wrap' : typeof a.pref === 'number' ? Math.max(0, Math.min(10, a.pref | 0)) : null;
+      if (pref == null) return 'Ungültig';
+      const arr = validMeld(m.cards, m.t, 0, pref);
+      if (!arr) return 'So passt der Joker nicht.';
+      m.cards = arr.map((x) => x.card);
+      m.ranks = arr.map((x) => x.rank);
+      log(s, `🔀 ${p.name} setzt den Joker in der ${TYPE_NAME[m.t]} um.`);
       return null;
     }
 
@@ -688,7 +705,7 @@
       dealer: s.dealer,
       players: s.players.map((p) => ({ name: p.name, bot: p.bot, down: p.down, handCount: p.hand.length, total: p.total, scores: p.scores.slice() })),
       hand: seat != null && s.players[seat] ? s.players[seat].hand.slice() : [],
-      melds: s.melds.map((m) => ({ id: m.id, owner: m.owner, t: m.t, cards: m.cards.slice(), ranks: m.ranks.slice(), late: !!m.late })),
+      melds: s.melds.map((m) => ({ id: m.id, owner: m.owner, t: m.t, cards: m.cards.slice(), ranks: m.ranks.slice(), late: !!m.late, movable: seat != null && seat === s.current && s.phase === 'play' && !!m.touch && m.touch.turn === s.turn && m.touch.seat === seat && runChoices(m.cards, m.t).length > 1 })),
       discardTop: s.discard.length ? s.discard[s.discard.length - 1] : null,
       discardCount: s.discard.length,
       discardBy: s.discardBy,
