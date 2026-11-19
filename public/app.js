@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.66 · 19.11.2026';
+  const VERSION = '1.67 · 19.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -185,6 +185,7 @@
     knockPrompt: store.get('knockPrompt', true),
     tipSmall: store.get('tipSmall', false),
     tips: store.get('tips', true),
+    jokerMust: store.get('jokerMust', false),
     lang: store.get('lang', 'de'),
     sort: store.get('sort', 'suit'),
     sideW: store.get('sideW', 0),
@@ -213,7 +214,7 @@
     }
     start() {
       if (this.host) this.host.destroy();
-      this.host = new E.GameHost(this.players, { botDelay: store.get('botDelay', 950), knockMs: 7000, onChange: () => this.emit() });
+      this.host = new E.GameHost(this.players, { botDelay: store.get('botDelay', 950), knockMs: 7000, jokerMust: ui.jokerMust, onChange: () => this.emit() });
       this.emit();
     }
     emit() {
@@ -395,6 +396,14 @@
           </div>
           <p class="hint" style="margin:6px 0 0">${ui.tips ? 'Zeigt dir während des Spiels Vorschläge: welche Karte nehmen, auslegen, anlegen oder abwerfen.' : 'Turnier: ohne Tipps – alle spielen auf eigene Faust.'}</p>
         </div>
+        <div class="field">
+          <label>Getauschter Joker</label>
+          <div class="modesel">
+            <button class="btn small ${!ui.jokerMust ? 'on' : ''}" data-a="jokerFree">🃏 Behalten</button>
+            <button class="btn small ${ui.jokerMust ? 'on' : ''}" data-a="jokerMust">🔁 Wieder auslegen</button>
+          </div>
+          <p class="hint" style="margin:6px 0 0">${ui.jokerMust ? 'Ein eingetauschter Joker muss im selben Zug wieder an eine Kombination angelegt werden.' : 'Ein eingetauschter Joker kommt auf die Hand und darf dort bleiben.'}</p>
+        </div>
         <div class="field"><label>Ton</label>${soundControls()}</div>
         <h2>Gegen Bots</h2>
         <div class="row">
@@ -455,6 +464,10 @@
         <div class="row" style="justify-content:center;margin:6px 0 2px">
           ${isHost ? `<div class="modesel"><button class="btn small ${r.tips ? 'on' : ''}" data-a="roomTips" data-v="1">💡 Mit Tipps</button><button class="btn small ${!r.tips ? 'on' : ''}" data-a="roomTips" data-v="0">🏆 Turnier</button></div>`
             : `<span class="badge ${r.tips ? '' : 'gold'}">${r.tips ? '💡 Mit Tipps' : '🏆 Turnier – ohne Tipps'}</span>`}
+        </div>
+        <div class="row" style="justify-content:center;align-items:center;margin:2px 0 4px;gap:8px">
+          ${isHost ? `<span class="hint" style="margin:0">Getauschter Joker:</span><div class="modesel"><button class="btn small ${!r.jokerMust ? 'on' : ''}" data-a="roomJoker" data-v="0">🃏 Behalten</button><button class="btn small ${r.jokerMust ? 'on' : ''}" data-a="roomJoker" data-v="1">🔁 Wieder auslegen</button></div>`
+            : `<span class="badge">${r.jokerMust ? '🔁 Getauschter Joker: sofort wieder auslegen' : '🃏 Getauschter Joker: darf auf der Hand bleiben'}</span>`}
         </div>
         <ul class="seats">
           ${r.seats.map((s, i) => `
@@ -835,7 +848,7 @@
         <li><b>Skalamala:</b> 10er-Sequenz, abwechselnd rot – schwarz (2 rot, 3 schwarz, 4 rot …).</li>
         <li><b>Joker</b> ersetzen jede beliebige Karte – in jeder Kombination muss aber mindestens <b>eine echte Karte mehr</b> liegen als Joker (2 Karten + 1 Joker, 3 Karten + 2 Joker …).</li>
         <li><b>Joker in einer Sequenz:</b> Kann der Joker für verschiedene Karten stehen (vorne oder hinten), fragt das Spiel beim Auslegen und Anlegen, wofür er stehen soll – einfach die gewünschte Reihenfolge antippen.</li>
-        <li><b>Joker tauschen:</b> Nach dem ersten Auslegen darfst du die passende echte Karte auf den Platz eines Jokers legen. Der Joker kommt auf deine Hand und muss im selben Zug wieder an eine beliebige Kombination angelegt werden.</li>
+        <li><b>Joker tauschen:</b> Nach dem ersten Auslegen darfst du die passende echte Karte auf den Platz eines Jokers legen. Der Joker kommt auf deine Hand. Ob er im selben Zug wieder angelegt werden muss oder auf der Hand bleiben darf, legt die Einstellung <b>Getauschter Joker</b> fest (Standard: er darf auf der Hand bleiben).</li>
         <li>Beim <b>ersten Auslegen</b> wird <b>genau die Vorgabe</b> ausgelegt – z. B. in Runde 1 genau eine Gruppe aus 3 Karten und eine Sequenz aus 4 Karten. Steht „mind.“ dabei, darf die Kombination länger sein.</li>
         <li>In dem Zug, in dem man auslegt, wird <b>nur die Vorgabe</b> ausgelegt. <b>Anlegen</b> – an die eigenen und an die Kombinationen der Gegenspieler – erst ab dem <b>nächsten Zug</b>.</li>
       </ul>
@@ -874,7 +887,7 @@
         <li><b>Skalamala:</b> 10-card run alternating red – black (2 red, 3 black, 4 red …).</li>
         <li><b>Jokers</b> replace any card – but every meld needs at least <b>one more real card</b> than jokers (2 cards + 1 joker, 3 cards + 2 jokers …).</li>
         <li><b>Laying a joker on a run:</b> drag the joker onto the left or right half of the run – that's where it goes (front or back). For your first meld: if the joker is first in the collect pile, it goes to the start of the run.</li>
-        <li><b>Swapping a joker:</b> after your first meld you may place the matching real card on a joker's spot. The joker goes to your hand and must be laid off again on any meld in the same turn.</li>
+        <li><b>Swapping a joker:</b> after your first meld you may place the matching real card on a joker's spot. The joker goes to your hand. Whether it must be laid off again in the same turn or may stay in your hand is set by the <b>swapped joker</b> setting (default: it may stay in your hand).</li>
         <li>For your <b>first meld</b> you lay down <b>exactly the contract</b> – e.g. in round 1 exactly a group of 3 cards and a run of 4 cards. If it says „at least“, the meld may be longer.</li>
         <li>In the turn you meld, you lay down <b>only the contract</b>. <b>Laying off</b> – on your own and your opponents' melds – starts with your <b>next turn</b>.</li>
       </ul>
@@ -1289,7 +1302,7 @@
         if (!needName()) return;
         store.del('session');
         ui.room = null; go('lobby');
-        ui.ctl = new OnlineCtl({ t: 'create', name: ui.name, tips: ui.tips });
+        ui.ctl = new OnlineCtl({ t: 'create', name: ui.name, tips: ui.tips, jokerMust: ui.jokerMust });
         return;
       case 'joinFixed': {
         if (!needName()) return;
@@ -1331,6 +1344,8 @@
       case 'kick': return ui.ctl.send({ t: 'kick', seat: +el.dataset.seat });
       case 'start': return ui.ctl.send({ t: 'start' });
       case 'roomTips': return ui.ctl.send({ t: 'tips', on: el.dataset.v === '1' });
+      case 'roomJoker': return ui.ctl.send({ t: 'jokerMust', on: el.dataset.v === '1' });
+      case 'jokerFree': case 'jokerMust': ui.jokerMust = a === 'jokerMust'; store.set('jokerMust', ui.jokerMust); return render();
       case 'snd': {
         const k = el.dataset.k;
         window.SkSound && window.SkSound.set(k, !window.SkSound.get(k));

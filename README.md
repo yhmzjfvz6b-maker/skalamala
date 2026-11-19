@@ -72,6 +72,7 @@ Damit andere mitspielen können, muss der Server für sie erreichbar sein. Drei 
 - **Spielmodus:** „💡 Mit Tipps“ zeigt Vorschläge für den eigenen Zug, „🏆 Turnier“ spielt ohne Tipps (online legt der Gastgeber den Modus fest).
 - Beim **ersten Auslegen genau die Vorgabe** (z. B. Runde 1: genau Gruppe aus 3 + Sequenz aus 4). Nur wo „mind.“ steht (Runde 3, 7, 8), dürfen Kombinationen länger sein.
 - **Im selben Zug** danach nur bei Gegenspielern anlegen, an die eigenen Kombinationen erst ab dem nächsten Zug.
+- **Getauschter Joker:** Einstellung „Behalten“ (Standard, darf auf der Hand bleiben) oder „Wieder auslegen“ (muss im selben Zug wieder angelegt werden).
 - **Anlegen:** im Zug des Auslegens nur die Vorgabe; anlegen (an eigene und fremde Kombinationen) erst ab dem nächsten Zug.
 - **Ausmachen:** wer keine Karten mehr hat – durch Abwerfen der letzten Karte oder durch Anlegen.
 - **Aus der Hand (Runde 7/8):** alles in einem Zug auslegen, höchstens eine Karte bleibt zum Abwerfen.

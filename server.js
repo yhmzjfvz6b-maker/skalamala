@@ -72,7 +72,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/' || url.pathname === '/index.html') logEvent('Besuch', { dev: device(req.headers['user-agent']) });
   if (url.pathname === '/api/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ok: true, version: '1.66', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
+    return res.end(JSON.stringify({ ok: true, version: '1.67', rooms: rooms.size, fixed: [...rooms.values()].filter((r) => r.fixed).map((r) => ({ code: r.code, name: r.title, members: r.members })) }));
   }
   let file;
   if (url.pathname === '/engine.js') file = path.join(__dirname, 'shared', 'engine.js');
@@ -176,7 +176,7 @@ const cleanName = (n) => String(n || '').replace(/[<>]/g, '').trim().slice(0, 16
 
 function roomInfo(room, seat) {
   return {
-    code: room.code, host: room.seats.indexOf(room.host), you: seat, started: !!room.game, tips: !!room.tips,
+    code: room.code, host: room.seats.indexOf(room.host), you: seat, started: !!room.game, tips: !!room.tips, jokerMust: !!room.jokerMust,
     title: room.title || '', fixed: !!room.fixed, members: room.members || [],
     seats: room.seats.map((s) => ({ name: s.name, bot: s.bot, connected: s.bot || !!s.ws })),
   };
@@ -221,6 +221,7 @@ function startGame(room) {
   room.game = new E.GameHost(room.seats.map((s) => ({ name: s.name, bot: s.bot })), {
     botDelay: 1000,
     knockMs: 7000,
+    jokerMust: !!room.jokerMust,
     approveMs: 120000, // online: nach 2 Minuten ohne Antwort wird zugestimmt, damit niemand hängen bleibt
     isAuto: (seat) => {
       const st = room.seats[seat];
@@ -268,7 +269,7 @@ function onConnection(ws) {
       case 'create': {
         if (room) return err('Du bist schon in einem Raum.');
         const st = newSeat(cleanName(m.name));
-        const r = { code: newCode(), host: st, seats: [st], game: null, created: Date.now(), emptySince: 0, tips: m.tips !== false };
+        const r = { code: newCode(), host: st, seats: [st], game: null, created: Date.now(), emptySince: 0, tips: m.tips !== false, jokerMust: !!m.jokerMust };
         rooms.set(r.code, r);
         return attach(r, st);
       }
@@ -319,6 +320,11 @@ function onConnection(ws) {
       case 'tips': {
         if (!isHost() || room.game) return;
         room.tips = !!m.on;
+        return sendRoom(room);
+      }
+      case 'jokerMust': {
+        if (!isHost() || room.game) return;
+        room.jokerMust = !!m.on;
         return sendRoom(room);
       }
       case 'start': {

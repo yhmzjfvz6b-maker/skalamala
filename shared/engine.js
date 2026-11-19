@@ -286,7 +286,7 @@
       knock: null,
       log: [], seq: 0,
       lastRound: null,
-      opts: Object.assign({ knockMs: 7000 }, opts || {}),
+      opts: Object.assign({ knockMs: 7000, jokerMust: false }, opts || {}),
       started: Date.now(),
     };
     startRound(s);
@@ -649,8 +649,10 @@
         p.hand.push(res.joker);
         gave(s, seat, [res.joker.id]);
         s.lastDrawn = res.joker.id;
-        s.mustPlay.push(res.joker.id);
-        log(s, `🔄 ${p.name} tauscht ${cardLabel(cards[0])} gegen den Joker – der Joker muss in diesem Zug wieder angelegt werden.`);
+        if (s.opts.jokerMust) {
+          s.mustPlay.push(res.joker.id);
+          log(s, `🔄 ${p.name} tauscht ${cardLabel(cards[0])} gegen den Joker – der Joker muss in diesem Zug wieder angelegt werden.`);
+        } else log(s, `🔄 ${p.name} tauscht ${cardLabel(cards[0])} gegen den Joker und nimmt ihn auf die Hand.`);
         return null;
       }
       log(s, `${p.name} legt ${cards.map(cardLabel).join(' ')} an.`);
@@ -1008,7 +1010,7 @@
   class GameHost {
     constructor(players, opts) {
       this.opts = Object.assign({ botDelay: 900, knockMs: 7000, onChange: () => {}, isAuto: null }, opts || {});
-      this.s = newGame(players, { knockMs: this.opts.knockMs, approveMs: this.opts.approveMs || 0 });
+      this.s = newGame(players, { knockMs: this.opts.knockMs, approveMs: this.opts.approveMs || 0, jokerMust: !!this.opts.jokerMust });
       this.timers = [];
       this._tick();
     }
