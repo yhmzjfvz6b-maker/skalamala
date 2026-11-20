@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.68 · 19.11.2026';
+  const VERSION = '1.69 · 20.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -728,7 +728,6 @@
       <div class="kpcard">${cardHTML(v.discardTop)}</div>
       <div class="kpmid">
         <h3>${esc(who)} klopft!</h3>
-        <div class="kpinfo">👍 Karte + Strafkarte für ${esc(who)}, danach ziehst du · 👎 du nimmst die Karte selbst, ohne Strafkarte</div>
       </div>
       <div class="thumbs">
         <button class="thumb up" data-a="drawStock" aria-label="Zustimmen" title="Zustimmen: ${esc(who)} bekommt die Karte + 1 Strafkarte, danach ziehst du vom Stapel oder der Ablage.">👍</button>
