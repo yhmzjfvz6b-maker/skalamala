@@ -1176,3 +1176,14 @@ html[lang="ksh"] .pchip.me .pn::after { content: ' (do)'; }
 .meld .mvj:hover { background: var(--yellow); color: var(--navy); }
 .meld .mvj { margin-left: 10px !important; position: relative; z-index: 6; }
 .meld .card:has(+ .mvj) { margin-right: 0; }
+
+/* 1.70: Erinnerung, wenn man online am Zug ist und nicht reagiert */
+#nudge { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(5,15,60,.45); animation: fadein .2s ease-out; }
+#nudge.hide { display: none; }
+#nudge .nbox { background: linear-gradient(180deg, #2a52e0, #1534b5); border: 4px solid var(--yellow); border-radius: 22px; padding: 22px 26px 20px; text-align: center; color: #fff; max-width: min(88vw, 420px); box-shadow: 0 10px 0 rgba(0,0,0,.25), 0 30px 70px rgba(0,0,0,.6); }
+#nudge .nicon { font-size: 3rem; line-height: 1; animation: kpglow 1s ease-in-out infinite alternate; }
+#nudge h3 { margin: 8px 0 6px; font-size: 1.8rem; color: var(--yellow); }
+#nudge .ntext { margin: 0 0 14px; font-size: 1.1rem; line-height: 1.35; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+#nudge .nicon { animation: nudgewob .6s ease-in-out infinite alternate; box-shadow: none; }
+@keyframes nudgewob { from { transform: rotate(-12deg) scale(1); } to { transform: rotate(12deg) scale(1.12); } }

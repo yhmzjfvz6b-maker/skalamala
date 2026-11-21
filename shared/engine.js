@@ -715,6 +715,7 @@
       mustPlay: seat === s.current ? (s.mustPlay || []).slice() : [],
       got: seat != null && s.got && s.got[seat] ? s.got[seat].slice() : [],
       gotSeq: seat != null && s.gotSeq ? s.gotSeq[seat] || 0 : 0,
+      idle: s.idleFrom && s.opts.idleMs ? { ms: Date.now() - s.idleFrom, limit: s.opts.idleMs, seat: s.current } : null,
       clock: { game: (s.ended || Date.now()) - (s.started || Date.now()), turn: Date.now() - (s.turnAt || Date.now()) },
       ownLocked: seat != null && s.players[seat] ? (s.players[seat].down && s.players[seat].downTurn === s.turn) : false,
       knock: {
@@ -1027,14 +1028,16 @@
   class GameHost {
     constructor(players, opts) {
       this.opts = Object.assign({ botDelay: 900, knockMs: 7000, onChange: () => {}, isAuto: null }, opts || {});
-      this.s = newGame(players, { knockMs: this.opts.knockMs, approveMs: this.opts.approveMs || 0, jokerMust: !!this.opts.jokerMust });
+      this.s = newGame(players, { knockMs: this.opts.knockMs, approveMs: this.opts.approveMs || 0, jokerMust: !!this.opts.jokerMust, idleMs: this.opts.idleMs || 0 });
       this.timers = [];
       this._tick();
     }
     isAuto(seat) { return this.opts.isAuto ? this.opts.isAuto(seat, this.s) : this.s.players[seat].bot; }
     view(seat) { return view(this.s, seat); }
     act(seat, a) {
+      const wasCur = seat != null && seat === this.s.current;
       const err = act(this.s, seat, a);
+      if (!err && wasCur) this.s.idleFrom = Date.now(); // der Spieler am Zug hat reagiert
       if (!err) { this.opts.onChange(); this._tick(); }
       return err;
     }
@@ -1047,6 +1050,20 @@
       if (this.dead) return;
       const s = this.s, seq = s.seq;
       s.autoSeats = s.players.map((_, i) => !!this.isAuto(i));
+      // Online: reagiert der Spieler am Zug nicht, spielt das Spiel nach idleMs für ihn weiter (Erinnerung im Client nach der Hälfte)
+      const idleAuto = s.idleAutoTurn === s.turn;
+      const idleCounts = s.opts.idleMs > 0 && (s.phase === 'draw' || s.phase === 'play') && !this.isAuto(s.current) && !idleAuto;
+      if (!idleCounts) s.idleFrom = 0;
+      else {
+        if (s.idleTurn !== s.turn || !s.idleFrom) { s.idleTurn = s.turn; s.idleFrom = Date.now(); }
+        const ms = Math.max(0, s.idleFrom + s.opts.idleMs - Date.now());
+        this._later(ms + 50, () => {
+          if (s.seq !== seq || s.idleAutoTurn === s.turn) return;
+          s.idleAutoTurn = s.turn;
+          log(s, `⏰ ${s.players[s.current].name} hat ${Math.round(s.opts.idleMs / 1000)} Sekunden nicht reagiert – der Zug wird automatisch gespielt.`);
+          this.opts.onChange(); this._tick();
+        });
+      }
       if (s.phase === 'lastLay' && s.lastLay) {
         // Bots legen ihre Vorgabe aus, wenn sie können; Menschen haben bis zum Zeitlimit
         for (const i of s.lastLay.pending.filter((i) => this.isAuto(i))) {
@@ -1097,10 +1114,10 @@
           });
         }
       }
-      if ((s.phase === 'draw' || s.phase === 'play') && this.isAuto(s.current)) {
+      if ((s.phase === 'draw' || s.phase === 'play') && (this.isAuto(s.current) || idleAuto)) {
         let delay = s.phase === 'draw' ? this.opts.botDelay * 1.2 : this.opts.botDelay;
         // Können Menschen um die offene Karte klopfen, überlegt der Bot länger – damit „Klopfen“ lange genug zu sehen ist
-        if (s.phase === 'draw' && !s.knock.order.length && s.players.some((_, i) => i !== s.current && !this.isAuto(i) && canKnock(s, i))) delay = Math.max(delay, 5000);
+        if (!idleAuto && s.phase === 'draw' && !s.knock.order.length && s.players.some((_, i) => i !== s.current && !this.isAuto(i) && canKnock(s, i))) delay = Math.max(delay, 5000);
         this._later(delay, () => {
           if (s.seq !== seq) return;
           const cur = s.current;

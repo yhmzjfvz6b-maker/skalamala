@@ -4,7 +4,7 @@
   const E = window.Skalamala;
   const LOGO = 'logo.svg';
   const EMBLEM = 'emblem.svg';
-  const VERSION = '1.69 · 20.11.2026';
+  const VERSION = '1.70 · 21.11.2026';
   const COLORS = ['#2bb24c', '#ff9417', '#3fa9ff', '#e5262f', '#8e44d9', '#f2c200', '#ff5fa2', '#14b8a6'];
   const avatar = (name, i, extra) => `<span class="av ${extra && extra.off ? 'off' : ''}" style="--c:${COLORS[i % COLORS.length]}">${esc(String(name).replace(/[^\p{L}\p{N}]/gu, '').charAt(0).toUpperCase() || '?')}${extra && extra.cnt != null ? `<span class="cnt">${extra.cnt}</span>` : ''}</span>`;
   // Narrenkappe für den Joker (eigene Zeichnung)
@@ -214,7 +214,7 @@
     }
     start() {
       if (this.host) this.host.destroy();
-      this.host = new E.GameHost(this.players, { botDelay: store.get('botDelay', 950), knockMs: 7000, jokerMust: ui.jokerMust, onChange: () => this.emit() });
+      this.host = new E.GameHost(this.players, { botDelay: store.get('botDelay', 950), knockMs: 7000, jokerMust: false, onChange: () => this.emit() });
       this.emit();
     }
     emit() {
@@ -395,14 +395,6 @@
             <button class="btn small ${!ui.tips ? 'on' : ''}" data-a="modeTour">🏆 Turnier</button>
           </div>
           <p class="hint" style="margin:6px 0 0">${ui.tips ? 'Zeigt dir während des Spiels Vorschläge: welche Karte nehmen, auslegen, anlegen oder abwerfen.' : 'Turnier: ohne Tipps – alle spielen auf eigene Faust.'}</p>
-        </div>
-        <div class="field">
-          <label>Getauschter Joker</label>
-          <div class="modesel">
-            <button class="btn small ${!ui.jokerMust ? 'on' : ''}" data-a="jokerFree">🃏 Behalten</button>
-            <button class="btn small ${ui.jokerMust ? 'on' : ''}" data-a="jokerMust">🔁 Wieder auslegen</button>
-          </div>
-          <p class="hint" style="margin:6px 0 0">${ui.jokerMust ? 'Ein eingetauschter Joker muss im selben Zug wieder an eine Kombination angelegt werden.' : 'Ein eingetauschter Joker kommt auf die Hand und darf dort bleiben.'}</p>
         </div>
         <div class="field"><label>Ton</label>${soundControls()}</div>
         <h2>Gegen Bots</h2>
@@ -736,6 +728,30 @@
     </div>`;
   }
 
+
+
+  // ---------- Online: Erinnerung, wenn man am Zug ist und nicht reagiert ----------
+  function idleLeft(v) {
+    if (!v || !v.idle || v.idle.seat !== v.seat || v.seat == null) return null;
+    const ms = v.idle.ms + (Date.now() - (ui.clockAt || Date.now()));
+    return { ms, left: Math.max(0, v.idle.limit - ms), half: v.idle.limit / 2 };
+  }
+  function updateNudge() {
+    const v = ui.view, il = idleLeft(v);
+    let el = document.getElementById('nudge');
+    if (!il || il.ms < il.half) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'nudge';
+      el.innerHTML = `<div class="nbox"><div class="nicon">⏰</div><h3>Du bist dran!</h3><p class="ntext"></p><button class="btn primary">Weiterspielen</button></div>`;
+      el.addEventListener('click', () => { el.classList.add('hide'); ui.nudgeHidden = v && v.idle ? v.idle.seat + ':' + (v.turnNo || '') + ':' + Math.floor(Date.now() / 1000) : 1; });
+      document.body.appendChild(el);
+      try { if (window.SkSound) window.SkSound.play('knock'); } catch (e) {}
+    }
+    const sec = Math.ceil(il.left / 1000);
+    el.querySelector('.ntext').textContent = sec > 0 ? `Noch ${sec} Sekunden – dann spielt das Spiel deinen Zug automatisch.` : 'Dein Zug wird jetzt automatisch gespielt …';
+  }
+  setInterval(updateNudge, 500);
 
   // ---------- Spielzeit / Zugdauer ----------
   function clockNow(v) {
@@ -1303,7 +1319,7 @@
         if (!needName()) return;
         store.del('session');
         ui.room = null; go('lobby');
-        ui.ctl = new OnlineCtl({ t: 'create', name: ui.name, tips: ui.tips, jokerMust: ui.jokerMust });
+        ui.ctl = new OnlineCtl({ t: 'create', name: ui.name, tips: ui.tips, jokerMust: false });
         return;
       case 'joinFixed': {
         if (!needName()) return;
